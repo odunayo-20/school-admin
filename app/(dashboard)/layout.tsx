@@ -1,6 +1,7 @@
 "use client";
 
 import { AuthGuard } from "@/components/auth/auth-guard";
+import { AppNav } from "@/components/layout/nav";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/context";
 
@@ -31,7 +32,10 @@ export default function DashboardLayout({
     <AuthGuard>
       <div className="flex min-h-full flex-1 flex-col">
         <DashboardHeader />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex flex-1 flex-col md:flex-row">
+          <AppNav />
+          <div className="flex flex-1 flex-col">{children}</div>
+        </div>
       </div>
     </AuthGuard>
   );

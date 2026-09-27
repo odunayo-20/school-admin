@@ -85,7 +85,11 @@ export async function parseApiError(response: Response): Promise<ApiError> {
     // Response had no JSON body (e.g. a proxy/gateway error page).
   }
 
-  return new ApiError(kind, body?.message || fallbackMessage(kind), {
+  // For server errors, never trust the backend's message field as user-facing
+  // text — in debug mode Laravel can put exception details there.
+  const message = kind === "server" ? fallbackMessage(kind) : body?.message || fallbackMessage(kind);
+
+  return new ApiError(kind, message, {
     status: response.status,
     fieldErrors: body?.errors,
   });
