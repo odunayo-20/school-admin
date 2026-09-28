@@ -8,26 +8,38 @@ import {
   LayoutDashboard,
   Percent,
   School as SchoolIcon,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
-import { canManageSchoolConfig } from "@/lib/auth/permissions";
+import { canManageSchoolConfig, canManageStaff } from "@/lib/auth/permissions";
+import type { UserRole } from "@/lib/auth/types";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
-  { href: "/school", label: "School Profile", icon: SchoolIcon, adminOnly: true },
-  { href: "/academics/sessions", label: "Academic Sessions", icon: Calendar, adminOnly: true },
-  { href: "/academics/classes", label: "Classes", icon: LayoutDashboard, adminOnly: true },
-  { href: "/academics/subjects", label: "Subjects", icon: BookOpen, adminOnly: true },
-  { href: "/settings/grading", label: "Grading", icon: Percent, adminOnly: true },
-] as const;
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, visible: () => true },
+  { href: "/staff", label: "Staff", icon: Users, visible: canManageStaff },
+  { href: "/school", label: "School Profile", icon: SchoolIcon, visible: canManageSchoolConfig },
+  {
+    href: "/academics/sessions",
+    label: "Academic Sessions",
+    icon: Calendar,
+    visible: canManageSchoolConfig,
+  },
+  {
+    href: "/academics/classes",
+    label: "Classes",
+    icon: LayoutDashboard,
+    visible: canManageSchoolConfig,
+  },
+  { href: "/academics/subjects", label: "Subjects", icon: BookOpen, visible: canManageSchoolConfig },
+  { href: "/settings/grading", label: "Grading", icon: Percent, visible: canManageSchoolConfig },
+] satisfies { href: string; label: string; icon: typeof Users; visible: (role: UserRole) => boolean }[];
 
 export function AppNav() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const canManage = user ? canManageSchoolConfig(user.role) : false;
 
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || canManage);
+  const items = NAV_ITEMS.filter((item) => (user ? item.visible(user.role) : false));
 
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-border px-4 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:px-3 md:py-4">

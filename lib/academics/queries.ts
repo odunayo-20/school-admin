@@ -95,7 +95,7 @@ export const useClasses = (page: number) =>
   useQuery({ queryKey: keys.classes(page), queryFn: () => api.getClasses(page) });
 
 export const useClassDetail = (id: number) =>
-  useQuery({ queryKey: keys.classDetail(id), queryFn: () => api.getClass(id) });
+  useQuery({ queryKey: keys.classDetail(id), queryFn: () => api.getClass(id), enabled: id > 0 });
 
 export function useCreateClass() {
   const queryClient = useQueryClient();

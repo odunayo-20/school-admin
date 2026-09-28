@@ -13,6 +13,7 @@ export type ApiErrorKind =
   | "authentication"
   | "authorization"
   | "not_found"
+  | "conflict"
   | "server"
   | "network"
   | "unknown";
@@ -51,6 +52,7 @@ function kindFromStatus(status: number): ApiErrorKind {
   if (status === 401) return "authentication";
   if (status === 403) return "authorization";
   if (status === 404) return "not_found";
+  if (status === 409) return "conflict";
   if (status >= 500) return "server";
   return "unknown";
 }
@@ -65,6 +67,8 @@ function fallbackMessage(kind: ApiErrorKind): string {
       return "You don't have permission to do that.";
     case "not_found":
       return "The requested resource could not be found.";
+    case "conflict":
+      return "This conflicts with an existing record.";
     case "server":
       return "Something went wrong on our end. Please try again shortly.";
     case "network":

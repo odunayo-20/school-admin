@@ -10,3 +10,17 @@ import type { UserRole } from "@/lib/auth/types";
 export function canManageSchoolConfig(role: UserRole): boolean {
   return role === "super_admin" || role === "admin";
 }
+
+/** Staff directory/profile access. Registrars commonly handle HR-adjacent
+ * records at schools, so included alongside admins — unconfirmed. */
+export function canManageStaff(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "registrar";
+}
+
+/** Granting a staff member login access. Kept to the same roles that can
+ * manage staff at all — the actual escalation risk (picking a role) is
+ * mitigated in the grant-access form itself, not by further restricting
+ * who can open it. */
+export function canManageStaffAccounts(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin";
+}
