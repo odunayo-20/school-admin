@@ -4,4 +4,8 @@
  */
 export const ENROLLMENT_ENDPOINTS = {
   classRoster: (classId: number) => `/api/classes/${classId}/students`,
+
+  studentEnrollments: (studentId: number) => `/api/students/${studentId}/enrollments`,
+  createEnrollment: "/api/enrollments",
+  enrollmentStatus: (id: number) => `/api/enrollments/${id}/status`,
 };

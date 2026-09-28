@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Search } from "lucide-react";
 import { EmptyState, ErrorState, LoadingState } from "@/components/data-state";
 import { Badge } from "@/components/ui/badge";
@@ -13,9 +14,9 @@ import { useDebouncedValue } from "@/lib/use-debounced-value";
 import type { Section } from "@/lib/academics/types";
 
 /**
- * Read-only. There is no student/enrollment management here — that belongs
- * to Module 03. This only displays whichever students the (proposed)
- * roster endpoint returns for the selected session/section.
+ * Read-only list view. Full student management lives on the student's own
+ * profile page (Module 03) — each row links there instead of duplicating
+ * any of it here.
  */
 export function ClassRoster({
   classId,
@@ -106,7 +107,11 @@ export function ClassRoster({
             <TableBody>
               {rosterQuery.data.data.map((student) => (
                 <TableRow key={student.id}>
-                  <TableCell className="font-medium">{student.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link href={`/students/${student.id}`} className="hover:underline">
+                      {student.name}
+                    </Link>
+                  </TableCell>
                   <TableCell>{student.student_no}</TableCell>
                   <TableCell>{student.section?.name ?? "—"}</TableCell>
                   <TableCell>

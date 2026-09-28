@@ -1,7 +1,13 @@
 import { apiClient } from "@/lib/api/client";
 import { ENROLLMENT_ENDPOINTS as E } from "@/lib/enrollment/endpoints";
 import type { Paginated } from "@/lib/academics/types";
-import type { RosterFilters, RosterStudent } from "@/lib/enrollment/types";
+import type {
+  Enrollment,
+  EnrollmentInput,
+  EnrollmentStatus,
+  RosterFilters,
+  RosterStudent,
+} from "@/lib/enrollment/types";
 
 function buildQuery(filters: RosterFilters): string {
   const params = new URLSearchParams();
@@ -14,3 +20,12 @@ function buildQuery(filters: RosterFilters): string {
 
 export const getClassRoster = (classId: number, filters: RosterFilters) =>
   apiClient.get<Paginated<RosterStudent>>(`${E.classRoster(classId)}?${buildQuery(filters)}`);
+
+export const getStudentEnrollments = (studentId: number) =>
+  apiClient.get<Enrollment[]>(E.studentEnrollments(studentId));
+
+export const createEnrollment = (data: EnrollmentInput) =>
+  apiClient.post<Enrollment>(E.createEnrollment, { ...data });
+
+export const updateEnrollmentStatus = (id: number, status: EnrollmentStatus) =>
+  apiClient.post<Enrollment>(E.enrollmentStatus(id), { status });

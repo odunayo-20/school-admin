@@ -24,3 +24,13 @@ export function canManageStaff(role: UserRole): boolean {
 export function canManageStaffAccounts(role: UserRole): boolean {
   return role === "super_admin" || role === "admin";
 }
+
+/** Admissions and student records. Same reasoning as staff — registrars are
+ * the natural owners of these at most schools — unconfirmed. */
+export function canManageAdmissions(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "registrar";
+}
+
+export function canManageStudents(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "registrar";
+}

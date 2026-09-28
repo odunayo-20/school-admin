@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import {
   BookOpen,
   Calendar,
+  ClipboardList,
+  GraduationCap,
   LayoutDashboard,
   Percent,
   School as SchoolIcon,
@@ -12,11 +14,18 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
-import { canManageSchoolConfig, canManageStaff } from "@/lib/auth/permissions";
+import {
+  canManageAdmissions,
+  canManageSchoolConfig,
+  canManageStaff,
+  canManageStudents,
+} from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/types";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, visible: () => true },
+  { href: "/admissions", label: "Admissions", icon: ClipboardList, visible: canManageAdmissions },
+  { href: "/students", label: "Students", icon: GraduationCap, visible: canManageStudents },
   { href: "/staff", label: "Staff", icon: Users, visible: canManageStaff },
   { href: "/school", label: "School Profile", icon: SchoolIcon, visible: canManageSchoolConfig },
   { href: "/academics", label: "Academic Overview", icon: Calendar, visible: canManageStaff },
