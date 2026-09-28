@@ -62,3 +62,14 @@ export const createSubjectAssignment = (staffId: number, data: SubjectTeacherAss
 
 export const deleteSubjectAssignment = (id: number) =>
   apiClient.delete<void>(E.deleteSubjectAssignment(id));
+
+// Reverse (class-scoped) lookups — read-only, for the class academic view.
+export const getClassTeachersForClass = (classId: number, academicSessionId: number) =>
+  apiClient.get<ClassTeacherAssignment[]>(
+    `${E.classTeachersForClass(classId)}?academic_session_id=${academicSessionId}`
+  );
+
+export const getSubjectTeachersForClass = (classId: number, academicSessionId: number) =>
+  apiClient.get<SubjectTeacherAssignment[]>(
+    `${E.subjectTeachersForClass(classId)}?academic_session_id=${academicSessionId}`
+  );

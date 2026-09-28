@@ -7,12 +7,14 @@ import { z } from "zod";
 import { Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { AdminOnly } from "@/components/auth/admin-only";
+import { ClassRoster } from "@/components/academics/class-roster";
 import { EmptyState, ErrorState, LoadingState } from "@/components/data-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
+  useAcademicSessions,
   useAssignSubjectToClass,
   useClassDetail,
   useCreateSection,
@@ -22,6 +24,7 @@ import {
   useUpdateClass,
   useUpdateSection,
 } from "@/lib/academics/queries";
+import { useClassTeachersForClass, useSubjectTeachersForClass } from "@/lib/staff/queries";
 import { ApiError } from "@/lib/api/errors";
 import type { Section } from "@/lib/academics/types";
 
@@ -208,6 +211,19 @@ function ClassDetailContent({ classId }: { classId: number }) {
   const classQuery = useClassDetail(classId);
   const unassignSubject = useUnassignSubjectFromClass(classId);
 
+  const sessionsQuery = useAcademicSessions(1);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const defaultSessionId = sessionsQuery.data
+    ? ((sessionsQuery.data.data.find((s) => s.is_current) ?? sessionsQuery.data.data[0])?.id ?? 0)
+    : 0;
+  const sessionId = selectedSessionId ?? defaultSessionId;
+
+  const classTeachersQuery = useClassTeachersForClass(classId, sessionId);
+  const subjectTeachersQuery = useSubjectTeachersForClass(classId, sessionId);
+  const teacherBySubjectId = new Map(
+    (subjectTeachersQuery.data ?? []).map((assignment) => [assignment.subject.id, assignment.staff])
+  );
+
   if (classQuery.isPending) return <LoadingState label="Loading class…" />;
   if (classQuery.isError) return <ErrorState error={classQuery.error} onRetry={() => classQuery.refetch()} />;
 
@@ -240,21 +256,28 @@ function ClassDetailContent({ classId }: { classId: number }) {
           <p className="text-sm text-muted-foreground">No subjects assigned yet.</p>
         ) : (
           <ul className="divide-y divide-border rounded-md border border-border bg-card">
-            {schoolClass.subjects.map((subject) => (
-              <li key={subject.id} className="flex items-center justify-between px-3 py-2 text-sm">
-                <span>
-                  {subject.name} <span className="text-muted-foreground">({subject.code})</span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={unassignSubject.isPending}
-                  onClick={() => unassignSubject.mutate(subject.id)}
-                >
-                  Remove
-                </Button>
-              </li>
-            ))}
+            {schoolClass.subjects.map((subject) => {
+              const teacher = teacherBySubjectId.get(subject.id);
+              return (
+                <li key={subject.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <span>
+                    {subject.name} <span className="text-muted-foreground">({subject.code})</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {teacher ? teacher.name : "No teacher assigned"}
+                    </span>
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={unassignSubject.isPending}
+                    onClick={() => unassignSubject.mutate(subject.id)}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
         <SubjectAssignment
@@ -262,6 +285,58 @@ function ClassDetailContent({ classId }: { classId: number }) {
           assignedSubjectIds={schoolClass.subjects.map((s) => s.id)}
         />
       </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Class teacher</h2>
+          {sessionsQuery.data && sessionsQuery.data.data.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Label htmlFor="teaching-session" className="text-xs text-muted-foreground">
+                Session
+              </Label>
+              <Select
+                id="teaching-session"
+                className="w-44"
+                value={sessionId || ""}
+                onChange={(e) => setSelectedSessionId(Number(e.target.value))}
+              >
+                {sessionsQuery.data.data.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.name}
+                    {session.is_current ? " (current)" : ""}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+        </div>
+
+        {classTeachersQuery.isPending && <LoadingState label="Loading class teacher…" />}
+        {classTeachersQuery.isError && <ErrorState error={classTeachersQuery.error} />}
+        {classTeachersQuery.isSuccess && classTeachersQuery.data.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No class teacher assigned for this session yet. Assign one from a staff member&apos;s profile.
+          </p>
+        )}
+        {classTeachersQuery.isSuccess && classTeachersQuery.data.length > 0 && (
+          <ul className="divide-y divide-border rounded-md border border-border bg-card">
+            {classTeachersQuery.data.map((assignment) => (
+              <li key={assignment.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                <span>{assignment.section ? `Section ${assignment.section.name}` : "Whole class"}</span>
+                {assignment.staff ? (
+                  <Link href={`/staff/${assignment.staff.id}`} className="underline">
+                    {assignment.staff.name}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <ClassRoster classId={schoolClass.id} academicSessionId={sessionId} sections={schoolClass.sections} />
     </div>
   );
 }

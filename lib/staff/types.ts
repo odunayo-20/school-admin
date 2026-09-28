@@ -81,12 +81,17 @@ interface AssignmentRefs {
 export interface ClassTeacherAssignment extends AssignmentRefs {
   id: number;
   staff_id: number;
+  /** Only populated when fetched from a class-scoped endpoint (Module 05's
+   * class academic view) — the staff-scoped endpoints Module 04 uses don't
+   * need it since the staff identity is already known from context. */
+  staff?: { id: number; name: string };
   section: { id: number; name: string } | null;
 }
 
 export interface SubjectTeacherAssignment extends AssignmentRefs {
   id: number;
   staff_id: number;
+  staff?: { id: number; name: string };
   subject: { id: number; name: string; code: string };
 }
 

@@ -16,6 +16,10 @@ const keys = {
   detail: (id: number) => ["staff", "detail", id] as const,
   classAssignments: (staffId: number) => ["staff", staffId, "class-assignments"] as const,
   subjectAssignments: (staffId: number) => ["staff", staffId, "subject-assignments"] as const,
+  classTeachersForClass: (classId: number, sessionId: number) =>
+    ["classes", classId, "class-teacher-assignments", sessionId] as const,
+  subjectTeachersForClass: (classId: number, sessionId: number) =>
+    ["classes", classId, "subject-teacher-assignments", sessionId] as const,
 };
 
 export const useStaffList = (filters: StaffFilters) =>
@@ -77,15 +81,29 @@ export function useCreateClassAssignment(staffId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: ClassTeacherAssignmentInput) => api.createClassAssignment(staffId, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classAssignments(staffId) }),
+    onSuccess: (assignment) => {
+      queryClient.invalidateQueries({ queryKey: keys.classAssignments(staffId) });
+      // The class academic view (Module 05) reads the same assignments the
+      // other way round — keep it from going stale too, without touching
+      // unrelated class-config queries.
+      queryClient.invalidateQueries({
+        queryKey: keys.classTeachersForClass(assignment.class.id, assignment.academic_session.id),
+      });
+    },
   });
 }
 
 export function useDeleteClassAssignment(staffId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.deleteClassAssignment(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classAssignments(staffId) }),
+    mutationFn: (assignment: { id: number; classId: number; academicSessionId: number }) =>
+      api.deleteClassAssignment(assignment.id),
+    onSuccess: (_void, assignment) => {
+      queryClient.invalidateQueries({ queryKey: keys.classAssignments(staffId) });
+      queryClient.invalidateQueries({
+        queryKey: keys.classTeachersForClass(assignment.classId, assignment.academicSessionId),
+      });
+    },
   });
 }
 
@@ -101,14 +119,40 @@ export function useCreateSubjectAssignment(staffId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: SubjectTeacherAssignmentInput) => api.createSubjectAssignment(staffId, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.subjectAssignments(staffId) }),
+    onSuccess: (assignment) => {
+      queryClient.invalidateQueries({ queryKey: keys.subjectAssignments(staffId) });
+      queryClient.invalidateQueries({
+        queryKey: keys.subjectTeachersForClass(assignment.class.id, assignment.academic_session.id),
+      });
+    },
   });
 }
 
 export function useDeleteSubjectAssignment(staffId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => api.deleteSubjectAssignment(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.subjectAssignments(staffId) }),
+    mutationFn: (assignment: { id: number; classId: number; academicSessionId: number }) =>
+      api.deleteSubjectAssignment(assignment.id),
+    onSuccess: (_void, assignment) => {
+      queryClient.invalidateQueries({ queryKey: keys.subjectAssignments(staffId) });
+      queryClient.invalidateQueries({
+        queryKey: keys.subjectTeachersForClass(assignment.classId, assignment.academicSessionId),
+      });
+    },
   });
 }
+
+// Reverse (class-scoped) lookups — read-only, for the class academic view.
+export const useClassTeachersForClass = (classId: number, academicSessionId: number) =>
+  useQuery({
+    queryKey: keys.classTeachersForClass(classId, academicSessionId),
+    queryFn: () => api.getClassTeachersForClass(classId, academicSessionId),
+    enabled: classId > 0 && academicSessionId > 0,
+  });
+
+export const useSubjectTeachersForClass = (classId: number, academicSessionId: number) =>
+  useQuery({
+    queryKey: keys.subjectTeachersForClass(classId, academicSessionId),
+    queryFn: () => api.getSubjectTeachersForClass(classId, academicSessionId),
+    enabled: classId > 0 && academicSessionId > 0,
+  });

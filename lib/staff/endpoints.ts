@@ -17,4 +17,9 @@ export const STAFF_ENDPOINTS = {
   subjectAssignments: (staffId: number) => `/api/staff/${staffId}/subject-assignments`,
   createSubjectAssignment: "/api/subject-teacher-assignments",
   deleteSubjectAssignment: (id: number) => `/api/subject-teacher-assignments/${id}`,
+
+  // Reverse (class-scoped) lookups for Module 05's academic view — read-only,
+  // assignment creation/removal stays on the staff profile (Module 04).
+  classTeachersForClass: (classId: number) => `/api/classes/${classId}/class-teacher-assignments`,
+  subjectTeachersForClass: (classId: number) => `/api/classes/${classId}/subject-teacher-assignments`,
 };

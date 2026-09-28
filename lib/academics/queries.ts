@@ -70,7 +70,11 @@ export function useActivateAcademicSession() {
 
 // Terms
 export const useTerms = (sessionId: number) =>
-  useQuery({ queryKey: keys.terms(sessionId), queryFn: () => api.getTerms(sessionId) });
+  useQuery({
+    queryKey: keys.terms(sessionId),
+    queryFn: () => api.getTerms(sessionId),
+    enabled: sessionId > 0,
+  });
 
 export function useCreateTerm(sessionId: number) {
   const queryClient = useQueryClient();

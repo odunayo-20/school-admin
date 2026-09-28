@@ -187,7 +187,13 @@ export function ClassTeacherAssignments({ staffId }: { staffId: number }) {
                 variant="ghost"
                 size="sm"
                 disabled={deleteAssignment.isPending}
-                onClick={() => deleteAssignment.mutate(assignment.id)}
+                onClick={() =>
+                  deleteAssignment.mutate({
+                    id: assignment.id,
+                    classId: assignment.class.id,
+                    academicSessionId: assignment.academic_session.id,
+                  })
+                }
                 aria-label="Remove assignment"
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />

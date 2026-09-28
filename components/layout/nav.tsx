@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, visible: () => true },
   { href: "/staff", label: "Staff", icon: Users, visible: canManageStaff },
   { href: "/school", label: "School Profile", icon: SchoolIcon, visible: canManageSchoolConfig },
+  { href: "/academics", label: "Academic Overview", icon: Calendar, visible: canManageStaff },
   {
     href: "/academics/sessions",
     label: "Academic Sessions",
@@ -44,7 +45,13 @@ export function AppNav() {
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-border px-4 py-2 md:w-56 md:flex-col md:border-b-0 md:border-r md:px-3 md:py-4">
       {items.map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        // Exact match only for "/academics" so its own overview page isn't
+        // shown active while on a more specific child route like
+        // "/academics/sessions" (which has its own nav entry).
+        const isActive =
+          item.href === "/academics"
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         return (
           <Link
