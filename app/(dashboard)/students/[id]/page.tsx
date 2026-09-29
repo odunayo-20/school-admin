@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/data-state";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { canManageStudents } from "@/lib/auth/permissions";
 import {
   useCreateGuardian,
@@ -19,6 +20,7 @@ import {
   useUpdateStudentStatus,
 } from "@/lib/students/queries";
 import { useStudentEnrollments, useUpdateEnrollmentStatus } from "@/lib/enrollment/queries";
+import { useStudentResults } from "@/lib/results/queries";
 import type { Guardian, StudentStatus } from "@/lib/students/types";
 
 const STATUS_LABELS: Record<StudentStatus, string> = {
@@ -161,6 +163,45 @@ function EnrollmentHistory({ studentId }: { studentId: number }) {
   );
 }
 
+/** Published results only — this reads the same list Module 06 manages,
+ * never draft/unpublished data (see lib/results). */
+function StudentResults({ studentId }: { studentId: number }) {
+  const resultsQuery = useStudentResults(studentId);
+
+  if (resultsQuery.isPending) return <LoadingState label="Loading results…" />;
+  if (resultsQuery.isError) return <ErrorState error={resultsQuery.error} onRetry={() => resultsQuery.refetch()} />;
+  if (resultsQuery.data.length === 0) {
+    return <EmptyState title="No published results yet." />;
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Session / Term</TableHead>
+          <TableHead>Subject</TableHead>
+          <TableHead>Total</TableHead>
+          <TableHead>Grade</TableHead>
+          <TableHead>Remark</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {resultsQuery.data.map((result) => (
+          <TableRow key={result.id}>
+            <TableCell>
+              {result.academic_session.name} · {result.term.name}
+            </TableCell>
+            <TableCell className="font-medium">{result.subject.name}</TableCell>
+            <TableCell>{result.total_score ?? "—"}</TableCell>
+            <TableCell>{result.grade ? <Badge variant="outline">{result.grade}</Badge> : "—"}</TableCell>
+            <TableCell className="text-muted-foreground">{result.remark ?? "—"}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
 function StudentDetailContent({ studentId }: { studentId: number }) {
   const studentQuery = useStudent(studentId);
   const createGuardian = useCreateGuardian(studentId);
@@ -248,6 +289,11 @@ function StudentDetailContent({ studentId }: { studentId: number }) {
         </div>
         <EnrollmentHistory studentId={studentId} />
         <EnrollDialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen} studentId={studentId} />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Results</h2>
+        <StudentResults studentId={studentId} />
       </section>
     </div>
   );

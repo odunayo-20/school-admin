@@ -6,6 +6,7 @@
  */
 export const STAFF_ENDPOINTS = {
   staff: "/api/staff",
+  myProfile: "/api/staff/me",
   staffMember: (id: number) => `/api/staff/${id}`,
   staffStatus: (id: number) => `/api/staff/${id}/status`,
   staffAccount: (id: number) => `/api/staff/${id}/account`,

@@ -29,6 +29,10 @@ export const getStaffList = (filters: StaffFilters) =>
 
 export const getStaffMember = (id: number) => apiClient.get<Staff>(E.staffMember(id));
 
+/** The current user's own Staff record, if their account is linked to one
+ * (e.g. a teacher). 404 if the logged-in user has no linked staff record. */
+export const getMyStaffProfile = () => apiClient.get<Staff>(E.myProfile);
+
 export const createStaff = (data: StaffInput) => apiClient.post<Staff>(E.staff, { ...data });
 
 export const updateStaff = (id: number, data: StaffInput) =>

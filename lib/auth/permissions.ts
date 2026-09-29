@@ -34,3 +34,20 @@ export function canManageAdmissions(role: UserRole): boolean {
 export function canManageStudents(role: UserRole): boolean {
   return role === "super_admin" || role === "admin" || role === "registrar";
 }
+
+/** Entering/submitting results. Teachers (role "staff") own their own
+ * batches; admins can also enter/oversee any — unconfirmed. */
+export function canEnterResults(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "staff";
+}
+
+/** Approve/return/publish. Kept to the same roles as other academic-record
+ * oversight — unconfirmed. */
+export function canApproveResults(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "registrar";
+}
+
+/** Access to the Results area at all (listing/viewing). */
+export function canAccessResults(role: UserRole): boolean {
+  return canEnterResults(role) || canApproveResults(role);
+}

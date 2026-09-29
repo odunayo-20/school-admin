@@ -6,6 +6,7 @@ import {
   BookOpen,
   Calendar,
   ClipboardList,
+  FileCheck2,
   GraduationCap,
   LayoutDashboard,
   Percent,
@@ -15,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import {
+  canAccessResults,
   canManageAdmissions,
   canManageSchoolConfig,
   canManageStaff,
@@ -26,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, visible: () => true },
   { href: "/admissions", label: "Admissions", icon: ClipboardList, visible: canManageAdmissions },
   { href: "/students", label: "Students", icon: GraduationCap, visible: canManageStudents },
+  { href: "/results", label: "Results", icon: FileCheck2, visible: canAccessResults },
   { href: "/staff", label: "Staff", icon: Users, visible: canManageStaff },
   { href: "/school", label: "School Profile", icon: SchoolIcon, visible: canManageSchoolConfig },
   { href: "/academics", label: "Academic Overview", icon: Calendar, visible: canManageStaff },

@@ -28,6 +28,11 @@ export const useStaffList = (filters: StaffFilters) =>
 export const useStaffMember = (id: number) =>
   useQuery({ queryKey: keys.detail(id), queryFn: () => api.getStaffMember(id), enabled: id > 0 });
 
+/** 404 is an expected, normal outcome here (not every account is linked to
+ * a staff record) — don't retry it like a real failure. */
+export const useMyStaffProfile = () =>
+  useQuery({ queryKey: ["staff", "me"], queryFn: api.getMyStaffProfile, retry: false });
+
 export function useCreateStaff() {
   const queryClient = useQueryClient();
   return useMutation({
