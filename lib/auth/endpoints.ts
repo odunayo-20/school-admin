@@ -1,17 +1,20 @@
 /**
  * Laravel authentication endpoint paths.
  *
- * INTENTIONALLY LEFT UNSET. No Laravel API project or API documentation was
- * available in this workspace to confirm the real routes, so per the project
- * instructions these are not guessed (e.g. as `/login` or `/api/login`).
+ * PROPOSED CONTRACT — not yet confirmed against a real Laravel API. Per the
+ * project owner's direction (Module 02), the frontend is being built ahead
+ * of the backend; these paths follow common Laravel/Sanctum SPA conventions
+ * (cookie session, not a bearer token) and should be reconciled once the
+ * real API exists. If the real routes differ, only this file needs to
+ * change — `lib/auth/api.ts` reads from it exclusively.
  *
- * Once `routes/api.php` / the auth controller is available, fill these in
- * (and add a CSRF-cookie endpoint here too if the API uses Sanctum's SPA
- * cookie flow). Nothing else in the app needs to change — `lib/auth/api.ts`
- * reads from this file exclusively.
+ * Assumed:
+ *   POST /api/auth/login   { email, password } -> { user: User }
+ *   POST /api/auth/logout  -> 204
+ *   GET  /api/auth/me      -> User
  */
 export const AUTH_ENDPOINTS = {
-  login: null as string | null,
-  logout: null as string | null,
-  currentUser: null as string | null,
+  login: "/api/auth/login" as string | null,
+  logout: "/api/auth/logout" as string | null,
+  currentUser: "/api/auth/me" as string | null,
 };
