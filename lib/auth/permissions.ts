@@ -51,3 +51,9 @@ export function canApproveResults(role: UserRole): boolean {
 export function canAccessResults(role: UserRole): boolean {
   return canEnterResults(role) || canApproveResults(role);
 }
+
+/** Running/reviewing promotions and viewing promotion history. Same
+ * reasoning as student records generally — unconfirmed. */
+export function canManagePromotions(role: UserRole): boolean {
+  return role === "super_admin" || role === "admin" || role === "registrar";
+}
