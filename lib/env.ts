@@ -4,6 +4,15 @@
  */
 export const env = {
   apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "",
+  /**
+   * The real Laravel backend (odunayo-20/school-system-api), now reachable.
+   * Only lib/result-checker talks to it so far — every other module is
+   * still reconciling against its own proposed-contract mock, module by
+   * module, the same way this project has always worked. Falls back to
+   * `apiUrl` so this collapses to one URL once every module has moved over.
+   */
+  resultCheckerApiUrl:
+    process.env.NEXT_PUBLIC_RESULT_CHECKER_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "",
 };
 
 if (!env.apiUrl && typeof window === "undefined") {
