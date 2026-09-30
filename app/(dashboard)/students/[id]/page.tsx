@@ -6,12 +6,14 @@ import { Plus, Trash2 } from "lucide-react";
 import { AdminOnly } from "@/components/auth/admin-only";
 import { EnrollDialog } from "@/components/students/enroll-dialog";
 import { GuardianFormDialog } from "@/components/students/guardian-form";
+import { PromoteDialog } from "@/components/promotions/promote-dialog";
 import { EmptyState, ErrorState, LoadingState } from "@/components/data-state";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { canManageStudents } from "@/lib/auth/permissions";
+import { canManagePromotions, canManageStudents } from "@/lib/auth/permissions";
+import { useAuth } from "@/lib/auth/context";
 import {
   useCreateGuardian,
   useDeleteGuardian,
@@ -21,7 +23,15 @@ import {
 } from "@/lib/students/queries";
 import { useStudentEnrollments, useUpdateEnrollmentStatus } from "@/lib/enrollment/queries";
 import { useStudentResults } from "@/lib/results/queries";
+import { useStudentPromotions } from "@/lib/promotions/queries";
 import type { Guardian, StudentStatus } from "@/lib/students/types";
+import type { PromotionDecision } from "@/lib/promotions/types";
+
+const PROMOTION_DECISION_LABELS: Record<PromotionDecision, string> = {
+  promote: "Promoted",
+  repeat: "Repeated",
+  graduate: "Graduated",
+};
 
 const STATUS_LABELS: Record<StudentStatus, string> = {
   active: "Active",
@@ -202,11 +212,48 @@ function StudentResults({ studentId }: { studentId: number }) {
   );
 }
 
+/** Promotion history — audit log of past promote/repeat/graduate decisions
+ * for this student (see lib/promotions). */
+function PromotionHistory({ studentId }: { studentId: number }) {
+  const promotionsQuery = useStudentPromotions(studentId);
+
+  if (promotionsQuery.isPending) return <LoadingState label="Loading promotion history…" />;
+  if (promotionsQuery.isError) {
+    return <ErrorState error={promotionsQuery.error} onRetry={() => promotionsQuery.refetch()} />;
+  }
+  if (promotionsQuery.data.length === 0) {
+    return <p className="text-sm text-muted-foreground">No promotion history yet.</p>;
+  }
+
+  return (
+    <ul className="divide-y divide-border rounded-md border border-border bg-card">
+      {promotionsQuery.data.map((record) => (
+        <li key={record.id} className="flex items-center justify-between px-3 py-2 text-sm">
+          <span>
+            {PROMOTION_DECISION_LABELS[record.decision]}: {record.from_class.name}
+            {record.from_section ? ` - ${record.from_section.name}` : ""}
+            {record.to_class && (
+              <>
+                {" → "}
+                {record.to_class.name}
+                {record.to_section ? ` - ${record.to_section.name}` : ""}
+              </>
+            )}{" "}
+            <span className="text-muted-foreground">({new Date(record.promoted_at).toLocaleDateString()})</span>
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function StudentDetailContent({ studentId }: { studentId: number }) {
+  const { user } = useAuth();
   const studentQuery = useStudent(studentId);
   const createGuardian = useCreateGuardian(studentId);
   const [guardianDialogOpen, setGuardianDialogOpen] = useState(false);
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
+  const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
 
   if (studentQuery.isPending) return <LoadingState label="Loading student…" />;
   if (studentQuery.isError) return <ErrorState error={studentQuery.error} onRetry={() => studentQuery.refetch()} />;
@@ -289,6 +336,27 @@ function StudentDetailContent({ studentId }: { studentId: number }) {
         </div>
         <EnrollmentHistory studentId={studentId} />
         <EnrollDialog open={enrollDialogOpen} onOpenChange={setEnrollDialogOpen} studentId={studentId} />
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground">Promotion</h2>
+          {user && canManagePromotions(user.role) && student.status === "active" && student.current_enrollment && (
+            <Button size="sm" variant="outline" onClick={() => setPromoteDialogOpen(true)}>
+              Promote
+            </Button>
+          )}
+        </div>
+        <PromotionHistory studentId={studentId} />
+        {student.current_enrollment && (
+          <PromoteDialog
+            open={promoteDialogOpen}
+            onOpenChange={setPromoteDialogOpen}
+            studentId={studentId}
+            studentName={student.name}
+            currentEnrollment={student.current_enrollment}
+          />
+        )}
       </section>
 
       <section className="space-y-3">

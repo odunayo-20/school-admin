@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Percent,
   School as SchoolIcon,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ import { useAuth } from "@/lib/auth/context";
 import {
   canAccessResults,
   canManageAdmissions,
+  canManagePromotions,
   canManageSchoolConfig,
   canManageStaff,
   canManageStudents,
@@ -29,6 +31,7 @@ const NAV_ITEMS = [
   { href: "/admissions", label: "Admissions", icon: ClipboardList, visible: canManageAdmissions },
   { href: "/students", label: "Students", icon: GraduationCap, visible: canManageStudents },
   { href: "/results", label: "Results", icon: FileCheck2, visible: canAccessResults },
+  { href: "/promotions", label: "Promotions", icon: TrendingUp, visible: canManagePromotions },
   { href: "/staff", label: "Staff", icon: Users, visible: canManageStaff },
   { href: "/school", label: "School Profile", icon: SchoolIcon, visible: canManageSchoolConfig },
   { href: "/academics", label: "Academic Overview", icon: Calendar, visible: canManageStaff },
