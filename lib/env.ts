@@ -21,6 +21,13 @@ export const env = {
     process.env.NEXT_PUBLIC_RESULT_CHECKER_API_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
     "",
+  /** Same real backend again — the staff/teacher portal (Module 10). Own
+   * override var for the same reason studentPortalApiUrl has one. */
+  staffPortalApiUrl:
+    process.env.NEXT_PUBLIC_STAFF_PORTAL_API_URL ??
+    process.env.NEXT_PUBLIC_RESULT_CHECKER_API_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "",
 };
 
 if (!env.apiUrl && typeof window === "undefined") {
