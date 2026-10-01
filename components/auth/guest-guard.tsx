@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/context";
@@ -13,14 +13,19 @@ import { getRedirectPathForRole } from "@/lib/auth/roles";
 export function GuestGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isLoading && isAuthenticated && user) {
       router.replace(getRedirectPathForRole(user.role));
     }
-  }, [isLoading, isAuthenticated, user, router]);
+  }, [mounted, isLoading, isAuthenticated, user, router]);
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />

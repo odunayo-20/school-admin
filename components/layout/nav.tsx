@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -118,6 +118,29 @@ export function AppNav({ mobileOpen, onMobileClose }: AppNavProps) {
 
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("admin_sidebar_collapsed");
+      if (saved !== null) {
+        setIsCollapsed(saved === "true");
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("admin_sidebar_collapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   const schoolName = contextQuery.data?.school?.name || "School Portal";
   const pendingAdmissions = useMemo(() => {
     return (admissionsQuery.data?.data ?? []).filter((a) => a.status === "pending").length;
@@ -163,7 +186,8 @@ export function AppNav({ mobileOpen, onMobileClose }: AppNavProps) {
             {!isDrawer && (
               <button
                 type="button"
-                onClick={() => setIsCollapsed(!isCollapsed)}
+                onClick={toggleCollapsed}
+                aria-expanded={!isCollapsed}
                 className="hidden rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:flex"
                 title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -221,6 +245,7 @@ export function AppNav({ mobileOpen, onMobileClose }: AppNavProps) {
                           onClick={() => {
                             if (isDrawer && onMobileClose) onMobileClose();
                           }}
+                          aria-current={isActive ? "page" : undefined}
                           title={collapsed ? item.label : undefined}
                           className={cn(
                             "group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150",

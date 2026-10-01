@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth/context";
@@ -16,14 +16,20 @@ import { useAuth } from "@/lib/auth/context";
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !isLoading && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isLoading, isAuthenticated, router]);
+  }, [mounted, isLoading, isAuthenticated, router]);
 
-  if (isLoading) {
+  // While mounting or validating the user session, render the session loader consistently
+  if (!mounted || isLoading) {
     return (
       <div className="flex flex-1 items-center justify-center py-24">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />

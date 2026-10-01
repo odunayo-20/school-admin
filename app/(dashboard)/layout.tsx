@@ -8,6 +8,7 @@ import { AppNav } from "@/components/layout/nav";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/context";
 import { useAcademicContext } from "@/lib/academics/queries";
+import { CommandPalette } from "@/components/layout/command-palette";
 
 function getBreadcrumb(pathname: string): { section: string; title: string } {
   if (pathname === "/dashboard") return { section: "Overview", title: "Dashboard" };
@@ -58,7 +59,10 @@ function DashboardHeader({ onOpenMobileMenu }: { onOpenMobileMenu: () => void })
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {/* Quick Search / Command Palette */}
+        <CommandPalette />
+
         {/* Live Academic Context Pill */}
         {sessionName && termName ? (
           <div className="hidden items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:flex">
