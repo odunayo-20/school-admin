@@ -3,6 +3,9 @@ import { ACADEMIC_ENDPOINTS as E } from "@/lib/academics/endpoints";
 import type {
   AcademicSession,
   ClassDetail,
+  ClassLevel,
+  CreateClassInput,
+  CreateSectionInput,
   GradingScale,
   Paginated,
   School,
@@ -10,6 +13,7 @@ import type {
   Section,
   Subject,
   Term,
+  UpdateClassInput,
 } from "@/lib/academics/types";
 
 // School (single profile)
@@ -41,19 +45,59 @@ export const createTerm = (
 export const updateTerm = (id: number, data: Pick<Term, "name" | "start_date" | "end_date">) =>
   apiClient.put<Term>(E.term(id), { ...data });
 
+// Class Levels
+export const getClassLevels = (page = 1) =>
+  apiClient.get<Paginated<ClassLevel>>(`${E.classLevels}?page=${page}&active_only=true`);
+
 // Classes
 export const getClasses = (page = 1) => apiClient.get<Paginated<SchoolClass>>(`${E.classes}?page=${page}`);
-export const getClass = (id: number) => apiClient.get<ClassDetail>(E.class(id));
-export const createClass = (data: Pick<SchoolClass, "name" | "order">) =>
+
+export const getClass = async (id: number): Promise<ClassDetail> => {
+  const [classData, sectionsRes, classSubjectsRes] = await Promise.all([
+    apiClient.get<SchoolClass>(E.class(id)),
+    apiClient.get<Paginated<Section>>(`${E.sections}?school_class_id=${id}`),
+    apiClient.get<Paginated<{ id: number; subject: Subject; status: string }>>(
+      `${E.classSubjects}?school_class_id=${id}&status=ACTIVE`
+    ),
+  ]);
+
+  const sections = Array.isArray(sectionsRes?.data) ? sectionsRes.data : [];
+  const subjects = Array.isArray(classSubjectsRes?.data)
+    ? classSubjectsRes.data.map((item) => ({
+        ...item.subject,
+        class_subject_id: item.id,
+      }))
+    : [];
+
+  return {
+    ...classData,
+    order: classData.sort_order ?? classData.order ?? 0,
+    sections,
+    subjects,
+  };
+};
+
+export const createClass = (data: CreateClassInput) =>
   apiClient.post<SchoolClass>(E.classes, { ...data });
-export const updateClass = (id: number, data: Pick<SchoolClass, "name" | "order">) =>
+
+export const updateClass = (id: number, data: UpdateClassInput) =>
   apiClient.put<SchoolClass>(E.class(id), { ...data });
 
-// Sections (nested under a class)
-export const createSection = (classId: number, data: Pick<Section, "name">) =>
-  apiClient.post<Section>(E.sections(classId), { ...data });
-export const updateSection = (id: number, data: Pick<Section, "name">) =>
-  apiClient.put<Section>(E.section(id), { ...data });
+// Sections
+export const createSection = (classId: number, data: CreateSectionInput) =>
+  apiClient.post<Section>(E.sections, {
+    school_class_id: classId,
+    name: data.name,
+    code: data.code || data.name.trim().toUpperCase(),
+    sort_order: data.sort_order,
+  });
+
+export const updateSection = (id: number, data: Partial<CreateSectionInput>) =>
+  apiClient.put<Section>(E.section(id), {
+    ...data,
+    code: data.code || (data.name ? data.name.trim().toUpperCase() : undefined),
+  });
+
 export const deleteSection = (id: number) => apiClient.delete<void>(E.section(id));
 
 // Subjects
@@ -65,10 +109,29 @@ export const updateSubject = (id: number, data: Pick<Subject, "name" | "code">) 
 export const deleteSubject = (id: number) => apiClient.delete<void>(E.subject(id));
 
 // Class <-> Subject assignment
-export const assignSubjectToClass = (classId: number, subjectId: number) =>
-  apiClient.post<void>(E.classSubjects(classId), { subject_id: subjectId });
-export const unassignSubjectFromClass = (classId: number, subjectId: number) =>
-  apiClient.delete<void>(E.classSubject(classId, subjectId));
+export const assignSubjectToClass = async (classId: number, subjectId: number) => {
+  const existing = await apiClient.get<Paginated<{ id: number; status: string }>>(
+    `${E.classSubjects}?school_class_id=${classId}&subject_id=${subjectId}`
+  );
+  const existingItem = existing?.data?.[0];
+  if (existingItem) {
+    if (existingItem.status !== "ACTIVE") {
+      await apiClient.put(E.classSubject(existingItem.id), { status: "ACTIVE" });
+    }
+    return;
+  }
+  await apiClient.post(E.classSubjects, { school_class_id: classId, subject_id: subjectId });
+};
+
+export const unassignSubjectFromClass = async (classId: number, subjectId: number) => {
+  const existing = await apiClient.get<Paginated<{ id: number; status: string }>>(
+    `${E.classSubjects}?school_class_id=${classId}&subject_id=${subjectId}&status=ACTIVE`
+  );
+  const existingItem = existing?.data?.[0];
+  if (existingItem) {
+    await apiClient.put(E.classSubject(existingItem.id), { status: "INACTIVE" });
+  }
+};
 
 // Grading configuration
 export const getGradingScales = async (): Promise<GradingScale[]> => {

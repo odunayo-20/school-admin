@@ -15,18 +15,20 @@ export const ACADEMIC_ENDPOINTS = {
   terms: (sessionId: number) => `/api/academic-sessions/${sessionId}/terms`,
   term: (id: number) => `/api/terms/${id}`,
 
+  classLevels: "/api/class-levels",
+  classLevel: (id: number) => `/api/class-levels/${id}`,
+
   classes: "/api/classes",
   class: (id: number) => `/api/classes/${id}`,
 
-  sections: (classId: number) => `/api/classes/${classId}/sections`,
+  sections: "/api/sections",
   section: (id: number) => `/api/sections/${id}`,
 
   subjects: "/api/subjects",
   subject: (id: number) => `/api/subjects/${id}`,
 
-  classSubjects: (classId: number) => `/api/classes/${classId}/subjects`,
-  classSubject: (classId: number, subjectId: number) =>
-    `/api/classes/${classId}/subjects/${subjectId}`,
+  classSubjects: "/api/class-subjects",
+  classSubject: (id: number) => `/api/class-subjects/${id}`,
 
   gradingScales: "/api/grading-scales",
   gradingScale: (id: number) => `/api/grading-scales/${id}`,

@@ -43,23 +43,66 @@ export interface Term {
   is_current: boolean;
 }
 
-export interface SchoolClass {
+export interface ClassLevel {
   id: number;
   name: string;
-  order: number;
+  code: string;
+  sort_order?: number;
+  status: string;
+  classes_count?: number;
+}
+
+export interface SchoolClass {
+  id: number;
+  class_level_id: number;
+  class_level?: {
+    id: number;
+    name: string;
+    code: string;
+  } | null;
+  name: string;
+  code: string;
+  sort_order?: number;
+  order?: number;
+  status?: string;
   sections_count?: number;
   subjects_count?: number;
 }
 
+export interface CreateClassInput {
+  class_level_id: number;
+  name: string;
+  code: string;
+  sort_order?: number;
+}
+
+export interface UpdateClassInput {
+  class_level_id?: number;
+  name?: string;
+  code?: string;
+  sort_order?: number;
+  status?: string;
+}
+
 export interface ClassDetail extends SchoolClass {
   sections: Section[];
-  subjects: Subject[];
+  subjects: (Subject & { class_subject_id?: number })[];
 }
 
 export interface Section {
   id: number;
-  class_id: number;
+  class_id?: number;
+  school_class_id?: number;
   name: string;
+  code?: string;
+  sort_order?: number;
+  status?: string;
+}
+
+export interface CreateSectionInput {
+  name: string;
+  code?: string;
+  sort_order?: number;
 }
 
 export interface Subject {

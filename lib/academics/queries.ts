@@ -16,6 +16,7 @@ const keys = {
   school: ["school"] as const,
   sessions: (page: number) => ["academic-sessions", page] as const,
   terms: (sessionId: number) => ["terms", sessionId] as const,
+  classLevels: (page: number) => ["class-levels", page] as const,
   classes: (page: number) => ["classes", page] as const,
   classDetail: (id: number) => ["classes", "detail", id] as const,
   subjects: (page: number) => ["subjects", page] as const,
@@ -94,6 +95,10 @@ export function useUpdateTerm(sessionId: number) {
   });
 }
 
+// Class Levels
+export const useClassLevels = (page = 1) =>
+  useQuery({ queryKey: keys.classLevels(page), queryFn: () => api.getClassLevels(page) });
+
 // Classes
 export const useClasses = (page: number) =>
   useQuery({ queryKey: keys.classes(page), queryFn: () => api.getClasses(page) });
@@ -104,15 +109,18 @@ export const useClassDetail = (id: number) =>
 export function useCreateClass() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Pick<SchoolClass, "name" | "order">) => api.createClass(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["classes"] }),
+    mutationFn: (data: Parameters<typeof api.createClass>[0]) => api.createClass(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["class-levels"] });
+    },
   });
 }
 
 export function useUpdateClass(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Pick<SchoolClass, "name" | "order">) => api.updateClass(id, data),
+    mutationFn: (data: Parameters<typeof api.updateClass>[1]) => api.updateClass(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       queryClient.invalidateQueries({ queryKey: keys.classDetail(id) });
@@ -124,17 +132,23 @@ export function useUpdateClass(id: number) {
 export function useCreateSection(classId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Pick<Section, "name">) => api.createSection(classId, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) }),
+    mutationFn: (data: Parameters<typeof api.createSection>[1]) => api.createSection(classId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+    },
   });
 }
 
 export function useUpdateSection(classId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Pick<Section, "name"> }) =>
+    mutationFn: ({ id, data }: { id: number; data: Parameters<typeof api.updateSection>[1] }) =>
       api.updateSection(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+    },
   });
 }
 
@@ -142,7 +156,10 @@ export function useDeleteSection(classId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.deleteSection(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+    },
   });
 }
 

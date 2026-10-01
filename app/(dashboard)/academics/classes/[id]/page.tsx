@@ -30,12 +30,23 @@ import type { Section } from "@/lib/academics/types";
 
 const classSchema = z.object({
   name: z.string().min(1, "Class name is required").max(100),
+  code: z.string().min(1, "Class code is required").max(20),
   order: z.coerce.number().int().min(0),
 });
 type ClassFormInput = z.input<typeof classSchema>;
 type ClassFormValues = z.output<typeof classSchema>;
 
-function ClassDetailsForm({ classId, name, order }: { classId: number; name: string; order: number }) {
+function ClassDetailsForm({
+  classId,
+  name,
+  code,
+  order,
+}: {
+  classId: number;
+  name: string;
+  code: string;
+  order: number;
+}) {
   const updateClass = useUpdateClass(classId);
   const [formError, setFormError] = useState<string | null>(null);
   const {
@@ -44,13 +55,17 @@ function ClassDetailsForm({ classId, name, order }: { classId: number; name: str
     formState: { errors },
   } = useForm<ClassFormInput, unknown, ClassFormValues>({
     resolver: zodResolver(classSchema),
-    defaultValues: { name, order },
+    defaultValues: { name, code, order },
   });
 
   async function onSubmit(values: ClassFormValues) {
     setFormError(null);
     try {
-      await updateClass.mutateAsync(values);
+      await updateClass.mutateAsync({
+        name: values.name.trim(),
+        code: values.code.trim().toUpperCase(),
+        sort_order: values.order,
+      });
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Something went wrong.");
     }
@@ -65,6 +80,11 @@ function ClassDetailsForm({ classId, name, order }: { classId: number; name: str
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
       <div className="space-y-2">
+        <Label htmlFor="class-code">Short Code</Label>
+        <Input id="class-code" className="w-32" {...register("code")} />
+        {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="class-order">Display order</Label>
         <Input id="class-order" type="number" className="w-28" {...register("order")} />
       </div>
@@ -75,18 +95,24 @@ function ClassDetailsForm({ classId, name, order }: { classId: number; name: str
   );
 }
 
-const sectionSchema = z.object({ name: z.string().min(1, "Section name is required").max(50) });
+const sectionSchema = z.object({
+  name: z.string().min(1, "Section name is required").max(50),
+  code: z.string().max(20).optional(),
+});
 type SectionFormValues = z.infer<typeof sectionSchema>;
 
 function AddSectionForm({ classId }: { classId: number }) {
   const createSection = useCreateSection(classId);
   const { register, handleSubmit, reset } = useForm<SectionFormValues>({
     resolver: zodResolver(sectionSchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: "", code: "" },
   });
 
   async function onSubmit(values: SectionFormValues) {
-    await createSection.mutateAsync(values);
+    await createSection.mutateAsync({
+      name: values.name.trim(),
+      code: (values.code || values.name).trim().toUpperCase(),
+    });
     reset();
   }
 
@@ -112,14 +138,20 @@ function SectionRow({ classId, section }: { classId: number; section: Section })
   const [editing, setEditing] = useState(false);
   const { register, handleSubmit } = useForm<SectionFormValues>({
     resolver: zodResolver(sectionSchema),
-    defaultValues: { name: section.name },
+    defaultValues: { name: section.name, code: section.code || section.name },
   });
 
   if (editing) {
     return (
       <form
         onSubmit={handleSubmit(async (values) => {
-          await updateSection.mutateAsync({ id: section.id, data: values });
+          await updateSection.mutateAsync({
+            id: section.id,
+            data: {
+              name: values.name.trim(),
+              code: (values.code || values.name).trim().toUpperCase(),
+            },
+          });
           setEditing(false);
         })}
         className="flex items-center gap-2 px-3 py-2"
@@ -233,7 +265,12 @@ function ClassDetailContent({ classId }: { classId: number }) {
     <div className="space-y-8">
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">Class details</h2>
-        <ClassDetailsForm classId={schoolClass.id} name={schoolClass.name} order={schoolClass.order} />
+        <ClassDetailsForm
+          classId={schoolClass.id}
+          name={schoolClass.name}
+          code={schoolClass.code ?? ""}
+          order={schoolClass.sort_order ?? schoolClass.order ?? 0}
+        />
       </section>
 
       <section className="space-y-3">

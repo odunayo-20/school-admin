@@ -19,19 +19,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PaginationControls } from "@/components/ui/pagination";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useClasses, useCreateClass } from "@/lib/academics/queries";
+import { useClasses, useClassLevels, useCreateClass } from "@/lib/academics/queries";
 import { ApiError } from "@/lib/api/errors";
 
 const classSchema = z.object({
+  class_level_id: z.coerce.number().int().min(1, "Please select a class level"),
   name: z.string().min(1, "Class name is required").max(100),
-  order: z.coerce.number().int().min(0, "Order must be 0 or greater"),
+  code: z.string().min(1, "Class code is required").max(20),
+  sort_order: z.coerce.number().int().min(0, "Order must be 0 or greater").optional(),
 });
 type ClassFormInput = z.input<typeof classSchema>;
 type ClassFormValues = z.output<typeof classSchema>;
 
 function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const createClass = useCreateClass();
+  const classLevelsQuery = useClassLevels();
   const [formError, setFormError] = useState<string | null>(null);
 
   const {
@@ -41,13 +45,18 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     formState: { errors },
   } = useForm<ClassFormInput, unknown, ClassFormValues>({
     resolver: zodResolver(classSchema),
-    defaultValues: { name: "", order: 0 },
+    defaultValues: { class_level_id: 0, name: "", code: "", sort_order: 0 },
   });
 
   async function onSubmit(values: ClassFormValues) {
     setFormError(null);
     try {
-      await createClass.mutateAsync(values);
+      await createClass.mutateAsync({
+        class_level_id: values.class_level_id,
+        name: values.name.trim(),
+        code: values.code.trim().toUpperCase(),
+        sort_order: values.sort_order,
+      });
       reset();
       onOpenChange(false);
     } catch (error) {
@@ -55,12 +64,14 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
     }
   }
 
+  const classLevels = classLevelsQuery.data?.data ?? [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create class</DialogTitle>
-          <DialogDescription>e.g. Primary 1, JSS 1</DialogDescription>
+          <DialogDescription>Define a class within an academic level, e.g. Primary 1, JSS 1.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {formError && (
@@ -68,17 +79,42 @@ function CreateClassDialog({ open, onOpenChange }: { open: boolean; onOpenChange
               {formError}
             </p>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="class-level">Class Level</Label>
+            <Select id="class-level" {...register("class_level_id")}>
+              <option value="0">Select a level…</option>
+              {classLevels.map((lvl) => (
+                <option key={lvl.id} value={lvl.id}>
+                  {lvl.name} ({lvl.code})
+                </option>
+              ))}
+            </Select>
+            {errors.class_level_id && (
+              <p className="text-sm text-destructive">{errors.class_level_id.message}</p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="class-name">Class name</Label>
             <Input id="class-name" placeholder="Primary 1" {...register("name")} />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="class-code">Short Code</Label>
+            <Input id="class-code" placeholder="PRI-1" {...register("code")} />
+            {errors.code && <p className="text-sm text-destructive">{errors.code.message}</p>}
+            <p className="text-xs text-muted-foreground">Used in short identifiers, reports, and timetables.</p>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="class-order">Display order</Label>
-            <Input id="class-order" type="number" {...register("order")} />
-            {errors.order && <p className="text-sm text-destructive">{errors.order.message}</p>}
+            <Input id="class-order" type="number" {...register("sort_order")} />
+            {errors.sort_order && <p className="text-sm text-destructive">{errors.sort_order.message}</p>}
           </div>
-          <Button type="submit" className="w-full" disabled={createClass.isPending}>
+
+          <Button type="submit" className="w-full" disabled={createClass.isPending || classLevelsQuery.isLoading}>
             {createClass.isPending ? "Saving…" : "Save"}
           </Button>
         </form>
@@ -122,8 +158,9 @@ function ClassesList() {
           <TableHeader>
             <TableRow>
               <TableHead>Class</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>Level</TableHead>
               <TableHead>Sections</TableHead>
-              <TableHead>Subjects</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -131,8 +168,9 @@ function ClassesList() {
             {classes.map((schoolClass) => (
               <TableRow key={schoolClass.id}>
                 <TableCell className="font-medium">{schoolClass.name}</TableCell>
-                <TableCell>{schoolClass.sections_count ?? "—"}</TableCell>
-                <TableCell>{schoolClass.subjects_count ?? "—"}</TableCell>
+                <TableCell className="font-mono text-xs">{schoolClass.code}</TableCell>
+                <TableCell>{schoolClass.class_level?.name ?? "—"}</TableCell>
+                <TableCell>{schoolClass.sections_count ?? 0}</TableCell>
                 <TableCell className="text-right">
                   <Link
                     href={`/academics/classes/${schoolClass.id}`}
