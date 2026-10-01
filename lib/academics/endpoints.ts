@@ -7,6 +7,7 @@
  */
 export const ACADEMIC_ENDPOINTS = {
   school: "/api/school",
+  academicContext: "/api/academic-context",
 
   academicSessions: "/api/academic-sessions",
   academicSession: (id: number) => `/api/academic-sessions/${id}`,

@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api/client";
 import { ACADEMIC_ENDPOINTS as E } from "@/lib/academics/endpoints";
 import type {
+  AcademicContext,
   AcademicSession,
   ClassDetail,
   ClassLevel,
@@ -16,8 +17,9 @@ import type {
   UpdateClassInput,
 } from "@/lib/academics/types";
 
-// School (single profile)
+// School & Context
 export const getSchool = () => apiClient.get<School>(E.school);
+export const getAcademicContext = () => apiClient.get<AcademicContext>(E.academicContext);
 export const updateSchool = (data: Omit<School, "id">) =>
   apiClient.put<School>(E.school, { ...data });
 

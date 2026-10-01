@@ -23,8 +23,10 @@ const keys = {
   gradingScales: ["grading-scales"] as const,
 };
 
-// School
+// School & Academic Context
 export const useSchool = () => useQuery({ queryKey: keys.school, queryFn: api.getSchool });
+export const useAcademicContext = () =>
+  useQuery({ queryKey: ["academic-context"], queryFn: api.getAcademicContext });
 
 export function useUpdateSchool() {
   const queryClient = useQueryClient();

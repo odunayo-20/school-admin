@@ -26,6 +26,12 @@ export interface School {
   email: string | null;
 }
 
+export interface AcademicContext {
+  school: { id: number; name: string; short_name?: string; status: string } | null;
+  session: { id: number; name: string; start_date: string; end_date: string; status: string } | null;
+  term: { id: number; academic_session_id: number; name: string; term_number: number; start_date: string; end_date: string; status: string } | null;
+}
+
 export interface AcademicSession {
   id: number;
   name: string;
