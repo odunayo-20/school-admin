@@ -11,7 +11,12 @@ export type UserRole =
   | "admin"
   | "registrar"
   | "staff"
-  | "student";
+  | "student"
+  | "SUPER_ADMIN"
+  | "ADMIN"
+  | "REGISTRAR"
+  | "STAFF"
+  | "STUDENT";
 
 export interface Permission {
   name: string;
@@ -22,16 +27,22 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  permissions?: Permission[];
+  status?: string;
+  staff_type?: string | null;
+  email_verified?: boolean;
+  last_login_at?: string | null;
+  permissions?: (Permission | string)[];
 }
 
 export interface AuthResponse {
   user: User;
-  /** Only present if the API turns out to use token-based auth instead of cookies. */
   token?: string;
+  token_type?: string;
+  expires_at?: string | null;
 }
 
 export interface LoginCredentials {
   email: string;
   password: string;
 }
+

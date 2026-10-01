@@ -1,17 +1,13 @@
 import { env } from "@/lib/env";
 import { ApiError, networkApiError, parseApiError } from "@/lib/api/errors";
+import { getAdminToken } from "@/lib/auth/token";
 
 /**
  * Single reusable client for every call to the Laravel API. Every feature
- * module (auth, students, staff, ...) should go through this instead of
- * calling `fetch` directly.
+ * module (auth, students, staff, ...) goes through this.
  *
- * Auth mechanism: requests are sent with `credentials: "include"` so that,
- * if the Laravel API uses cookie-based (Sanctum SPA) authentication, the
- * session cookie is attached automatically. This has NOT been confirmed
- * against the real backend — if the API instead uses bearer tokens, add the
- * `Authorization` header here (in one place) once that's verified. See the
- * implementation report for details.
+ * Auth mechanism: uses stateless Sanctum Bearer tokens (Authorization: Bearer <token>)
+ * matching school-system-api's authentication scheme.
  */
 
 type Json = Record<string, unknown> | unknown[];
@@ -20,22 +16,35 @@ interface RequestOptions {
   signal?: AbortSignal;
 }
 
+function normalizePath(path: string): string {
+  if (path.startsWith("/api/") && !path.startsWith("/api/v1/")) {
+    return path.replace("/api/", "/api/v1/");
+  }
+  return path;
+}
+
 async function request<T>(
   path: string,
   init: RequestInit & RequestOptions = {}
 ): Promise<T> {
-  const url = `${env.apiUrl}${path}`;
+  const url = `${env.apiUrl}${normalizePath(path)}`;
+  const token = getAdminToken();
+
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init.body ? { "Content-Type": "application/json" } : {}),
+    ...(init.headers as Record<string, string> | undefined),
+  };
+
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   let response: Response;
   try {
     response = await fetch(url, {
       ...init,
-      credentials: "include",
-      headers: {
-        Accept: "application/json",
-        ...(init.body ? { "Content-Type": "application/json" } : {}),
-        ...init.headers,
-      },
+      headers,
     });
   } catch (cause) {
     throw networkApiError(cause);
@@ -50,13 +59,25 @@ async function request<T>(
   }
 
   try {
-    return (await response.json()) as T;
+    const json = await response.json();
+    // Unwrap Laravel's { data: resource } envelope for single resources,
+    // preserving { data: [...], meta: {...} } for paginated collections.
+    if (
+      json !== null &&
+      typeof json === "object" &&
+      "data" in json &&
+      !("meta" in json)
+    ) {
+      return (json as { data: T }).data;
+    }
+    return json as T;
   } catch (cause) {
     throw new ApiError("unknown", "Received an unexpected response from the server.", {
       cause,
     });
   }
 }
+
 
 export const apiClient = {
   get: <T>(path: string, options?: RequestOptions) =>

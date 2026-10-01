@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
@@ -8,6 +8,7 @@ import {
   login as loginRequest,
   logout as logoutRequest,
 } from "@/lib/auth/api";
+import { getAdminToken, setAdminToken } from "@/lib/auth/token";
 import type { LoginCredentials, User } from "@/lib/auth/types";
 import { ApiError } from "@/lib/api/errors";
 
@@ -28,16 +29,24 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [hasToken, setHasToken] = useState(() => getAdminToken() !== null);
 
   const currentUserQuery = useQuery({
     queryKey: CURRENT_USER_QUERY_KEY,
     queryFn: getCurrentUser,
+    enabled: hasToken,
     retry: false,
   });
+
+  if (currentUserQuery.isError && hasToken) {
+    setAdminToken(null);
+    setHasToken(false);
+  }
 
   const loginMutation = useMutation({
     mutationFn: loginRequest,
     onSuccess: (data) => {
+      setHasToken(true);
       queryClient.setQueryData(CURRENT_USER_QUERY_KEY, data.user);
     },
   });
@@ -45,6 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logoutMutation = useMutation({
     mutationFn: logoutRequest,
     onSettled: () => {
+      setHasToken(false);
+      setAdminToken(null);
       // Clear regardless of whether the API call itself succeeded, so a
       // failed logout request can never leave stale "authenticated" state
       // on screen.
@@ -75,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextValue = {
     user: isUnauthenticatedResponse ? null : currentUserQuery.data ?? null,
     isAuthenticated: Boolean(currentUserQuery.data),
-    isLoading: currentUserQuery.isPending,
+    isLoading: hasToken && currentUserQuery.isLoading,
     isLoggingIn: loginMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
     login,

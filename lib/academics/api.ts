@@ -30,7 +30,10 @@ export const activateAcademicSession = (id: number) =>
   apiClient.post<AcademicSession>(E.activateAcademicSession(id));
 
 // Terms (nested under a session)
-export const getTerms = (sessionId: number) => apiClient.get<Term[]>(E.terms(sessionId));
+export const getTerms = async (sessionId: number): Promise<Term[]> => {
+  const res = await apiClient.get<any>(E.terms(sessionId));
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
 export const createTerm = (
   sessionId: number,
   data: Pick<Term, "name" | "start_date" | "end_date">
@@ -68,7 +71,10 @@ export const unassignSubjectFromClass = (classId: number, subjectId: number) =>
   apiClient.delete<void>(E.classSubject(classId, subjectId));
 
 // Grading configuration
-export const getGradingScales = () => apiClient.get<GradingScale[]>(E.gradingScales);
+export const getGradingScales = async (): Promise<GradingScale[]> => {
+  const res = await apiClient.get<any>(E.gradingScales);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
 export const createGradingScale = (data: Omit<GradingScale, "id">) =>
   apiClient.post<GradingScale>(E.gradingScales, { ...data });
 export const updateGradingScale = (id: number, data: Omit<GradingScale, "id">) =>

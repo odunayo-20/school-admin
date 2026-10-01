@@ -45,8 +45,10 @@ export const grantStaffAccount = (id: number, data: GrantAccountInput) =>
   apiClient.post<Staff>(E.staffAccount(id), { ...data });
 
 // Class teacher assignments
-export const getClassAssignments = (staffId: number) =>
-  apiClient.get<ClassTeacherAssignment[]>(E.classAssignments(staffId));
+export const getClassAssignments = async (staffId: number): Promise<ClassTeacherAssignment[]> => {
+  const res = await apiClient.get<any>(E.classAssignments(staffId));
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
 
 export const createClassAssignment = (staffId: number, data: ClassTeacherAssignmentInput) =>
   apiClient.post<ClassTeacherAssignment>(E.createClassAssignment, { staff_id: staffId, ...data });
@@ -55,8 +57,10 @@ export const deleteClassAssignment = (id: number) =>
   apiClient.delete<void>(E.deleteClassAssignment(id));
 
 // Subject teacher assignments
-export const getSubjectAssignments = (staffId: number) =>
-  apiClient.get<SubjectTeacherAssignment[]>(E.subjectAssignments(staffId));
+export const getSubjectAssignments = async (staffId: number): Promise<SubjectTeacherAssignment[]> => {
+  const res = await apiClient.get<any>(E.subjectAssignments(staffId));
+  return Array.isArray(res) ? res : (res?.data ?? []);
+};
 
 export const createSubjectAssignment = (staffId: number, data: SubjectTeacherAssignmentInput) =>
   apiClient.post<SubjectTeacherAssignment>(E.createSubjectAssignment, {
