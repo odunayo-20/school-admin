@@ -117,11 +117,29 @@ export interface Subject {
   code: string;
 }
 
-export interface GradingScale {
-  id: number;
+export interface GradingScaleItem {
+  id?: number;
   grade: string;
-  min_score: number;
-  max_score: number;
+  min_percentage?: number;
+  max_percentage?: number;
+  min_score?: number;
+  max_score?: number;
   grade_point: number;
   remark: string | null;
+}
+
+export interface GradingScale {
+  id: number;
+  name?: string;
+  code?: string;
+  class_level_id?: number;
+  status?: string;
+  items?: GradingScaleItem[];
+  grade?: string;
+  min_percentage?: number;
+  max_percentage?: number;
+  min_score?: number;
+  max_score?: number;
+  grade_point?: number;
+  remark?: string | null;
 }
