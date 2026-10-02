@@ -184,6 +184,62 @@ export interface Subject {
   id: number;
   name: string;
   code: string;
+  sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+  class_subjects_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SubjectFilters {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  code?: string;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | "";
+  active_only?: boolean;
+}
+
+export interface CreateSubjectInput {
+  name: string;
+  code: string;
+  sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+}
+
+export interface UpdateSubjectInput {
+  name: string;
+  code: string;
+  sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+}
+
+export interface ClassSubject {
+  id: number;
+  school_class_id?: number;
+  school_class?: SchoolClass;
+  subject_id?: number;
+  subject?: Subject;
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ClassSubjectFilters {
+  page?: number;
+  per_page?: number;
+  school_class_id?: number;
+  subject_id?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | "";
+}
+
+export interface CreateClassSubjectInput {
+  school_class_id: number;
+  subject_id: number;
+}
+
+export interface UpdateClassSubjectInput {
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
 }
 
 export interface GradingScaleItem {

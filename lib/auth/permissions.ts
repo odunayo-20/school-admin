@@ -16,6 +16,18 @@ export function canManageSchoolConfig(role: UserRole): boolean {
   return r === "super_admin" || r === "admin";
 }
 
+/** Subject catalogue and class-subject offerings. Admins and registrars can view/manage. */
+export function canManageSubjects(role: UserRole): boolean {
+  const r = norm(role);
+  return r === "super_admin" || r === "admin" || r === "registrar";
+}
+
+/** Subject deletion is restricted to Admin and Super Admin (matching backend permissions). */
+export function canDeleteSubjects(role: UserRole): boolean {
+  const r = norm(role);
+  return r === "super_admin" || r === "admin";
+}
+
 /** Staff directory/profile access. Registrars commonly handle HR-adjacent
  * records at schools, so included alongside admins — unconfirmed. */
 export function canManageStaff(role: UserRole): boolean {

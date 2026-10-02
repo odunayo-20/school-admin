@@ -20,6 +20,13 @@ import type {
   SchoolClass,
   Section,
   Subject,
+  SubjectFilters,
+  CreateSubjectInput,
+  UpdateSubjectInput,
+  ClassSubject,
+  ClassSubjectFilters,
+  CreateClassSubjectInput,
+  UpdateClassSubjectInput,
   Term,
   UpdateAcademicSessionInput,
   UpdateClassInput,
@@ -157,14 +164,75 @@ export const updateSection = (id: number, data: UpdateSectionInput) =>
 export const deleteSection = (id: number) => apiClient.delete<void>(E.section(id));
 
 // Subjects
-export const getSubjects = (page = 1) => apiClient.get<Paginated<Subject>>(`${E.subjects}?page=${page}`);
-export const createSubject = (data: Pick<Subject, "name" | "code">) =>
-  apiClient.post<Subject>(E.subjects, { ...data });
-export const updateSubject = (id: number, data: Pick<Subject, "name" | "code">) =>
-  apiClient.put<Subject>(E.subject(id), { ...data });
+export const getSubjects = async (
+  pageOrFilters: number | SubjectFilters = 1
+): Promise<Paginated<Subject>> => {
+  const query = new URLSearchParams();
+  if (typeof pageOrFilters === "number") {
+    query.set("page", String(pageOrFilters));
+  } else {
+    if (pageOrFilters.page) query.set("page", String(pageOrFilters.page));
+    if (pageOrFilters.per_page) query.set("per_page", String(pageOrFilters.per_page));
+    if (pageOrFilters.search) query.set("search", pageOrFilters.search);
+    if (pageOrFilters.code) query.set("code", pageOrFilters.code);
+    if (pageOrFilters.status) query.set("status", pageOrFilters.status);
+    if (pageOrFilters.active_only !== undefined) query.set("active_only", String(pageOrFilters.active_only));
+  }
+
+  const qs = query.toString();
+  const url = qs ? `${E.subjects}?${qs}` : E.subjects;
+  return apiClient.get<Paginated<Subject>>(url);
+};
+
+export const getSubject = (id: number) => apiClient.get<Subject>(E.subject(id));
+
+export const createSubject = (data: CreateSubjectInput) =>
+  apiClient.post<Subject>(E.subjects, {
+    name: data.name,
+    code: data.code.trim().toUpperCase(),
+    sort_order: data.sort_order ?? 0,
+    status: data.status ?? "ACTIVE",
+  });
+
+export const updateSubject = (id: number, data: UpdateSubjectInput) =>
+  apiClient.put<Subject>(E.subject(id), {
+    name: data.name,
+    code: data.code.trim().toUpperCase(),
+    sort_order: data.sort_order ?? 0,
+    status: data.status ?? "ACTIVE",
+  });
+
 export const deleteSubject = (id: number) => apiClient.delete<void>(E.subject(id));
 
-// Class <-> Subject assignment
+// Class Subjects (Offerings)
+export const getClassSubjects = async (
+  filters: ClassSubjectFilters = {}
+): Promise<Paginated<ClassSubject>> => {
+  const query = new URLSearchParams();
+  if (filters.page) query.set("page", String(filters.page));
+  if (filters.per_page) query.set("per_page", String(filters.per_page));
+  if (filters.school_class_id) query.set("school_class_id", String(filters.school_class_id));
+  if (filters.subject_id) query.set("subject_id", String(filters.subject_id));
+  if (filters.status) query.set("status", filters.status);
+
+  const qs = query.toString();
+  const url = qs ? `${E.classSubjects}?${qs}` : E.classSubjects;
+  return apiClient.get<Paginated<ClassSubject>>(url);
+};
+
+export const getClassSubject = (id: number) =>
+  apiClient.get<ClassSubject>(E.classSubject(id));
+
+export const createClassSubject = (data: CreateClassSubjectInput) =>
+  apiClient.post<ClassSubject>(E.classSubjects, {
+    school_class_id: data.school_class_id,
+    subject_id: data.subject_id,
+  });
+
+export const updateClassSubject = (id: number, data: UpdateClassSubjectInput) =>
+  apiClient.put<ClassSubject>(E.classSubject(id), { status: data.status });
+
+// Class <-> Subject assignment helpers
 export const assignSubjectToClass = async (classId: number, subjectId: number) => {
   const existing = await apiClient.get<Paginated<{ id: number; status: string }>>(
     `${E.classSubjects}?school_class_id=${classId}&subject_id=${subjectId}`

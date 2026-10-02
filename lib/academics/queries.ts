@@ -3,18 +3,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/academics/api";
 import type {
-  AcademicSession,
   AcademicSessionFilters,
   ClassFilters,
   CreateAcademicSessionInput,
   CreateGradingScaleInput,
   CreateTermInput,
-  GradingCalculationResult,
   GradingScale,
   GradingScaleFilters,
   School,
-  Subject,
-  Term,
+  SubjectFilters,
+  CreateSubjectInput,
+  UpdateSubjectInput,
+  ClassSubjectFilters,
+  CreateClassSubjectInput,
   UpdateAcademicSessionInput,
   UpdateGradingScaleInput,
   UpdateTermInput,
@@ -29,7 +30,12 @@ const keys = {
   classLevels: (page: number) => ["class-levels", page] as const,
   classes: (pageOrFilters?: number | ClassFilters) => ["classes", pageOrFilters] as const,
   classDetail: (id: number) => ["classes", "detail", id] as const,
-  subjects: (page: number) => ["subjects", page] as const,
+  subjects: (pageOrFilters?: number | SubjectFilters) =>
+    ["subjects", pageOrFilters] as const,
+  subjectDetail: (id: number) => ["subjects", "detail", id] as const,
+  classSubjects: (filters?: ClassSubjectFilters) =>
+    ["class-subjects", filters] as const,
+  classSubjectDetail: (id: number) => ["class-subjects", "detail", id] as const,
   gradingScales: (filters?: GradingScaleFilters) => ["grading-scales", filters] as const,
   gradingScaleDetail: (id: number) => ["grading-scales", "detail", id] as const,
 };
@@ -246,23 +252,38 @@ export function useDeleteSection(classId: number) {
 }
 
 // Subjects
-export const useSubjects = (page: number) =>
-  useQuery({ queryKey: keys.subjects(page), queryFn: () => api.getSubjects(page) });
+export const useSubjects = (pageOrFilters: number | SubjectFilters = 1) =>
+  useQuery({
+    queryKey: keys.subjects(pageOrFilters),
+    queryFn: () => api.getSubjects(pageOrFilters),
+  });
+
+export const useSubjectDetail = (id: number) =>
+  useQuery({
+    queryKey: keys.subjectDetail(id),
+    queryFn: () => api.getSubject(id),
+    enabled: id > 0,
+  });
 
 export function useCreateSubject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Pick<Subject, "name" | "code">) => api.createSubject(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+    mutationFn: (data: CreateSubjectInput) => api.createSubject(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+    },
   });
 }
 
 export function useUpdateSubject() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Pick<Subject, "name" | "code"> }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateSubjectInput }) =>
       api.updateSubject(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      queryClient.invalidateQueries({ queryKey: keys.subjectDetail(id) });
+    },
   });
 }
 
@@ -270,7 +291,42 @@ export function useDeleteSubject() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.deleteSubject(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+    },
+  });
+}
+
+// Class Subjects (Offerings)
+export const useClassSubjects = (filters?: ClassSubjectFilters) =>
+  useQuery({
+    queryKey: keys.classSubjects(filters),
+    queryFn: () => api.getClassSubjects(filters),
+  });
+
+export function useCreateClassSubject() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateClassSubjectInput) => api.createClassSubject(data),
+    onSuccess: (_, data) => {
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      queryClient.invalidateQueries({ queryKey: keys.classDetail(data.school_class_id) });
+    },
+  });
+}
+
+export function useUpdateClassSubjectStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) =>
+      api.updateClassSubject(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+    },
   });
 }
 
@@ -279,7 +335,11 @@ export function useAssignSubjectToClass(classId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (subjectId: number) => api.assignSubjectToClass(classId, subjectId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) });
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+    },
   });
 }
 
@@ -287,7 +347,11 @@ export function useUnassignSubjectFromClass(classId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (subjectId: number) => api.unassignSubjectFromClass(classId, subjectId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.classDetail(classId) });
+      queryClient.invalidateQueries({ queryKey: ["class-subjects"] });
+      queryClient.invalidateQueries({ queryKey: ["subjects"] });
+    },
   });
 }
 

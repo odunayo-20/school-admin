@@ -31,6 +31,7 @@ import {
   canManageSchoolConfig,
   canManageStaff,
   canManageStudents,
+  canManageSubjects,
 } from "@/lib/auth/permissions";
 import type { UserRole } from "@/lib/auth/types";
 import { useAcademicContext } from "@/lib/academics/queries";
@@ -81,7 +82,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/academics/sessions", label: "Sessions & Terms", icon: Calendar, visible: canManageSchoolConfig },
       { href: "/academics/classes", label: "Classes & Arms", icon: Layers, visible: canManageSchoolConfig },
-      { href: "/academics/subjects", label: "Subjects", icon: BookOpen, visible: canManageSchoolConfig },
+      { href: "/academics/subjects", label: "Subjects", icon: BookOpen, visible: canManageSubjects },
       { href: "/settings/grading", label: "Grading Scales", icon: Percent, visible: canManageSchoolConfig },
     ],
   },
