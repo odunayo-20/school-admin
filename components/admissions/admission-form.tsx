@@ -15,7 +15,7 @@ import type { Admission, AdmissionInput } from "@/lib/admissions/types";
 const admissionSchema = z.object({
   applicant_name: z.string().min(1, "Applicant name is required").max(255),
   date_of_birth: z.string().optional().or(z.literal("")),
-  gender: z.enum(["male", "female", ""]),
+  gender: z.enum(["MALE", "FEMALE", "male", "female", ""]),
   intended_class_id: z.string().optional().or(z.literal("")),
   previous_school: z.string().max(255).optional().or(z.literal("")),
   guardian_name: z.string().min(1, "Guardian name is required").max(255),
@@ -28,7 +28,7 @@ function toAdmissionInput(values: AdmissionFormValues): AdmissionInput {
   return {
     applicant_name: values.applicant_name,
     date_of_birth: values.date_of_birth || null,
-    gender: values.gender || null,
+    gender: (values.gender ? values.gender.toUpperCase() : null) as any,
     intended_class_id: values.intended_class_id ? Number(values.intended_class_id) : null,
     previous_school: values.previous_school || null,
     guardian_name: values.guardian_name,
@@ -116,8 +116,8 @@ export function AdmissionForm({
             <Label htmlFor="gender">Gender</Label>
             <Select id="gender" {...register("gender")}>
               <option value="">Not specified</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
             </Select>
           </div>
         </div>

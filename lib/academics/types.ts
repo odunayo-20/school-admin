@@ -38,6 +38,7 @@ export interface AcademicSession {
   start_date: string;
   end_date: string;
   is_current: boolean;
+  status?: string;
 }
 
 export interface Term {

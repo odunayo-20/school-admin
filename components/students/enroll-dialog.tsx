@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { AlertCircle, CheckCircle2, Layers, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,8 +37,25 @@ export function EnrollDialog({
 
   const createEnrollment = useCreateEnrollment(studentId);
 
+  const sessions = sessionsQuery.data?.data ?? [];
+  const classes = classesQuery.data?.data ?? [];
   const sections = classId ? classDetailQuery.data?.sections ?? [] : [];
-  const needsSection = classId !== "" && sections.length > 0;
+  const isLoadingSections = Boolean(classId && classDetailQuery.isPending);
+
+  // Auto-select active session if available
+  useEffect(() => {
+    if (!sessionId && sessions.length > 0) {
+      const active = sessions.find((s) => s.is_current || s.status === "ACTIVE") ?? sessions[0];
+      if (active) setSessionId(String(active.id));
+    }
+  }, [sessions, sessionId]);
+
+  // Auto-select section when only one section exists
+  useEffect(() => {
+    if (sections.length === 1 && !sectionId) {
+      setSectionId(String(sections[0].id));
+    }
+  }, [sections, sectionId]);
 
   function reset() {
     setSessionId("");
@@ -47,21 +66,40 @@ export function EnrollDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!sessionId || !classId || (needsSection && !sectionId)) return;
+    if (!sessionId) {
+      setFormError("Please select an academic session.");
+      return;
+    }
+    if (!classId) {
+      setFormError("Please select an instructional class.");
+      return;
+    }
+    if (!sectionId) {
+      setFormError("A section is required. Every student must be placed into a specific class arm/section.");
+      return;
+    }
+
     setFormError(null);
     try {
       await createEnrollment.mutateAsync({
         student_id: studentId,
         academic_session_id: Number(sessionId),
         class_id: Number(classId),
-        section_id: needsSection ? Number(sectionId) : null,
+        section_id: Number(sectionId),
       });
       reset();
       onOpenChange(false);
     } catch (error) {
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong.");
+      setFormError(error instanceof ApiError ? error.message : "Something went wrong while creating the enrollment.");
     }
   }
+
+  const isSubmitDisabled =
+    createEnrollment.isPending ||
+    !sessionId ||
+    !classId ||
+    !sectionId ||
+    isLoadingSections;
 
   return (
     <Dialog
@@ -71,42 +109,68 @@ export function EnrollDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Enroll student</DialogTitle>
-          <DialogDescription>Choose the session, class, and section to place this student into.</DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+            <Layers className="h-5 w-5 text-primary" />
+            Enroll Student in Class
+          </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Assign the student to an academic session, instructional class, and designated arm.
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {formError && (
-            <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              {formError}
-            </p>
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{formError}</span>
+            </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="enroll-session">Academic session</Label>
-            <Select id="enroll-session" value={sessionId} onChange={(e) => setSessionId(e.target.value)}>
+          {/* Academic Session */}
+          <div className="space-y-1.5">
+            <Label htmlFor="enroll-session" className="text-xs font-semibold">
+              Academic Session <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              id="enroll-session"
+              value={sessionId}
+              onChange={(e) => {
+                setSessionId(e.target.value);
+                setFormError(null);
+              }}
+              className="text-xs h-9"
+            >
               <option value="">Select a session…</option>
-              {sessionsQuery.data?.data.map((session) => (
+              {sessions.map((session) => (
                 <option key={session.id} value={session.id}>
-                  {session.name}
+                  {session.name} {session.is_current || session.status === "ACTIVE" ? "(Current Session)" : ""}
                 </option>
               ))}
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="enroll-class">Class</Label>
+          {/* Instructional Class */}
+          <div className="space-y-1.5">
+            <Label htmlFor="enroll-class" className="text-xs font-semibold">
+              Class <span className="text-destructive">*</span>
+            </Label>
             <Select
               id="enroll-class"
               value={classId}
               onChange={(e) => {
                 setClassId(e.target.value);
                 setSectionId("");
+                setFormError(null);
               }}
+              className="text-xs h-9"
             >
               <option value="">Select a class…</option>
-              {classesQuery.data?.data.map((schoolClass) => (
+              {classes.map((schoolClass) => (
                 <option key={schoolClass.id} value={schoolClass.id}>
                   {schoolClass.name}
                 </option>
@@ -114,27 +178,87 @@ export function EnrollDialog({
             </Select>
           </div>
 
-          {needsSection && (
-            <div className="space-y-2">
-              <Label htmlFor="enroll-section">Section</Label>
-              <Select id="enroll-section" value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
-                <option value="">Select a section…</option>
-                {sections.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name}
-                  </option>
-                ))}
-              </Select>
+          {/* Section / Arm (Strictly Required by Backend & DB Contract) */}
+          {classId && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="enroll-section" className="text-xs font-semibold">
+                  Section / Arm <span className="text-destructive">*</span>
+                </Label>
+                {isLoadingSections && (
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading arms…
+                  </span>
+                )}
+              </div>
+
+              {isLoadingSections ? (
+                <div className="h-9 w-full rounded-md border border-border/60 bg-muted/30 animate-pulse" />
+              ) : sections.length > 0 ? (
+                <Select
+                  id="enroll-section"
+                  value={sectionId}
+                  onChange={(e) => {
+                    setSectionId(e.target.value);
+                    setFormError(null);
+                  }}
+                  className="text-xs h-9"
+                >
+                  <option value="">Select a section / arm…</option>
+                  {sections.map((section) => (
+                    <option key={section.id} value={section.id}>
+                      {section.name} {section.code ? `(${section.code})` : ""}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-semibold">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>No active sections for this class</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-600 dark:text-amber-400">
+                    The school management system requires every enrolled student to be assigned to an active class arm.
+                  </p>
+                  <Link
+                    href={`/academics/classes/${classId}`}
+                    className="inline-flex items-center text-[11px] font-semibold text-primary underline"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Go to Class Structure to add a section →
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={createEnrollment.isPending || !sessionId || !classId || (needsSection && !sectionId)}
-          >
-            {createEnrollment.isPending ? "Enrolling…" : "Enroll"}
-          </Button>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="text-xs h-9"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              className="text-xs h-9 min-w-28"
+              disabled={isSubmitDisabled}
+            >
+              {createEnrollment.isPending ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Enrolling…
+                </span>
+              ) : (
+                "Enroll Student"
+              )}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

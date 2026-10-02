@@ -26,11 +26,60 @@ export const getStudentList = (filters: StudentFilters) =>
 
 export const getStudent = (id: number) => apiClient.get<Student>(E.student(id));
 
-export const updateStudentPersonalInfo = (id: number, data: StudentPersonalInput) =>
-  apiClient.put<Student>(E.student(id), { ...data });
+export const updateStudentPersonalInfo = (id: number, data: StudentPersonalInput) => {
+  let firstName = data.first_name;
+  let lastName = data.last_name;
+  let middleName = data.middle_name;
 
-export const updateStudentStatus = (id: number, status: StudentStatus) =>
-  apiClient.post<Student>(E.status(id), { status });
+  if (!firstName && data.name) {
+    const parts = data.name.trim().split(" ");
+    firstName = parts[0];
+    if (parts.length > 2) {
+      middleName = parts.slice(1, -1).join(" ");
+      lastName = parts[parts.length - 1];
+    } else if (parts.length === 2) {
+      lastName = parts[1];
+    }
+  }
+
+  return apiClient.put<Student>(E.student(id), {
+    first_name: firstName || "Student",
+    middle_name: middleName || null,
+    last_name: lastName || null,
+    date_of_birth: data.date_of_birth || null,
+    gender: data.gender ? (data.gender.toUpperCase() as any) : null,
+    ...(data.student_number ? { student_number: data.student_number } : {}),
+  });
+};
+
+export const updateStudentStatus = async (
+  id: number,
+  status: StudentStatus,
+  currentAttributes?: Partial<StudentPersonalInput>
+) => {
+  let attributes = currentAttributes;
+  if (!attributes?.first_name && !attributes?.name) {
+    const current = await getStudent(id);
+    attributes = {
+      first_name: current.first_name || (current.name ? current.name.split(" ")[0] : "Student"),
+      middle_name: current.middle_name || null,
+      last_name: current.last_name || (current.name ? current.name.split(" ").slice(1).join(" ") : null),
+      date_of_birth: current.date_of_birth,
+      gender: current.gender,
+      student_number: current.student_number || current.student_no,
+    };
+  }
+
+  return apiClient.put<Student>(E.student(id), {
+    first_name: attributes.first_name || "Student",
+    middle_name: attributes.middle_name || null,
+    last_name: attributes.last_name || null,
+    date_of_birth: attributes.date_of_birth || null,
+    gender: attributes.gender ? (attributes.gender.toUpperCase() as any) : null,
+    ...(attributes.student_number ? { student_number: attributes.student_number } : {}),
+    status,
+  });
+};
 
 // Guardians
 export const createGuardian = (studentId: number, data: GuardianInput) =>

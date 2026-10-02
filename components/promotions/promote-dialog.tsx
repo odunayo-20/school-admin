@@ -43,30 +43,38 @@ export function PromoteDialog({
   const [formError, setFormError] = useState<string | null>(null);
   const [loadedForClass, setLoadedForClass] = useState<number | null>(null);
 
+  const currentClass = currentEnrollment?.class || currentEnrollment?.school_class;
+  const currentClassId = currentClass?.id ?? 0;
+  const currentClassName = currentClass?.name || "Class";
+
+  const currentSession = currentEnrollment?.academic_session;
+  const currentSessionId = currentSession?.id ?? 0;
+  const currentSessionName = currentSession?.name || "Academic Session";
+
   const sessionsQuery = useAcademicSessions(1);
   const classesQuery = useClasses(1);
   const candidatesQuery = usePromotionCandidates({
-    academic_session_id: currentEnrollment.academic_session.id,
-    class_id: currentEnrollment.class.id,
-    section_id: currentEnrollment.section?.id,
+    academic_session_id: currentSessionId,
+    class_id: currentClassId,
+    section_id: currentEnrollment?.section?.id,
   });
 
   const executePromotion = useExecuteBulkPromotion();
 
   const candidate = candidatesQuery.data?.find((c) => c.student.id === studentId);
 
-  if (candidate && loadedForClass !== currentEnrollment.class.id) {
+  if (candidate && loadedForClass !== currentClassId && currentClassId > 0) {
     setDecisionValue({
       decision: candidate.suggested_decision,
       to_class_id:
         candidate.suggested_decision === "promote"
           ? candidate.suggested_class?.id ?? null
           : candidate.suggested_decision === "repeat"
-            ? currentEnrollment.class.id
+            ? currentClassId
             : null,
       to_section_id: null,
     });
-    setLoadedForClass(currentEnrollment.class.id);
+    setLoadedForClass(currentClassId);
   }
 
   function reset() {
@@ -91,7 +99,7 @@ export function PromoteDialog({
     setFormError(null);
     try {
       await executePromotion.mutateAsync({
-        from_academic_session_id: currentEnrollment.academic_session.id,
+        from_academic_session_id: currentSessionId,
         to_academic_session_id: needsToSession ? Number(toSessionId) : null,
         decisions: [
           {
@@ -122,9 +130,9 @@ export function PromoteDialog({
         <DialogHeader>
           <DialogTitle>Promote {studentName}</DialogTitle>
           <DialogDescription>
-            Currently in {currentEnrollment.class.name}
-            {currentEnrollment.section ? ` - ${currentEnrollment.section.name}` : ""} (
-            {currentEnrollment.academic_session.name}).
+            Currently in {currentClassName}
+            {currentEnrollment?.section ? ` - ${currentEnrollment.section.name}` : ""} (
+            {currentSessionName}).
           </DialogDescription>
         </DialogHeader>
 
@@ -154,7 +162,7 @@ export function PromoteDialog({
                 <Select id="promote-to-session" value={toSessionId} onChange={(e) => setToSessionId(e.target.value)}>
                   <option value="">Select a session…</option>
                   {sessionsQuery.data?.data
-                    .filter((session) => session.id !== currentEnrollment.academic_session.id)
+                    .filter((session) => session.id !== currentSessionId)
                     .map((session) => (
                       <option key={session.id} value={session.id}>
                         {session.name}
@@ -166,8 +174,8 @@ export function PromoteDialog({
 
             <DecisionFields
               idPrefix="promote-dialog"
-              fromClassId={currentEnrollment.class.id}
-              fromClassName={currentEnrollment.class.name}
+              fromClassId={currentClassId}
+              fromClassName={currentClassName}
               classes={classesQuery.data?.data ?? []}
               value={decisionValue}
               onChange={setDecisionValue}

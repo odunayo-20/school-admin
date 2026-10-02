@@ -9,7 +9,7 @@
  * application record, not the student itself.
  */
 
-export type Gender = "male" | "female";
+export type Gender = "male" | "female" | "MALE" | "FEMALE";
 export type AdmissionStatus = "pending" | "approved" | "rejected";
 
 export interface Admission {

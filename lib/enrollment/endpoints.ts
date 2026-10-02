@@ -3,9 +3,10 @@
  * without a Module 03 backend to confirm it against.
  */
 export const ENROLLMENT_ENDPOINTS = {
-  classRoster: (classId: number) => `/api/classes/${classId}/students`,
-
-  studentEnrollments: (studentId: number) => `/api/students/${studentId}/enrollments`,
+  classRoster: (classId: number) => `/api/enrollments?school_class_id=${classId}`,
+  enrollments: "/api/enrollments",
+  studentEnrollments: (studentId: number) => `/api/enrollments?student_id=${studentId}`,
   createEnrollment: "/api/enrollments",
-  enrollmentStatus: (id: number) => `/api/enrollments/${id}/status`,
+  withdraw: (id: number) => `/api/enrollments/${id}/withdraw`,
+  cancel: (id: number) => `/api/enrollments/${id}/cancel`,
 };

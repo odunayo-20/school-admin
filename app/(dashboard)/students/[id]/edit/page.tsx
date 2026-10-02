@@ -19,7 +19,7 @@ import { ApiError } from "@/lib/api/errors";
 const personalSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   date_of_birth: z.string().optional().or(z.literal("")),
-  gender: z.enum(["male", "female", ""]),
+  gender: z.enum(["MALE", "FEMALE", "male", "female", ""]),
 });
 type PersonalFormValues = z.infer<typeof personalSchema>;
 
@@ -37,9 +37,15 @@ function EditStudentContent({ studentId }: { studentId: number }) {
     resolver: zodResolver(personalSchema),
     values: studentQuery.data
       ? {
-          name: studentQuery.data.name,
+          name:
+            studentQuery.data.full_name ||
+            studentQuery.data.name ||
+            [studentQuery.data.first_name, studentQuery.data.middle_name, studentQuery.data.last_name]
+              .filter(Boolean)
+              .join(" ") ||
+            "",
           date_of_birth: studentQuery.data.date_of_birth ?? "",
-          gender: studentQuery.data.gender ?? "",
+          gender: (studentQuery.data.gender?.toUpperCase() as any) ?? "",
         }
       : undefined,
   });
@@ -53,7 +59,7 @@ function EditStudentContent({ studentId }: { studentId: number }) {
       await updatePersonalInfo.mutateAsync({
         name: values.name,
         date_of_birth: values.date_of_birth || null,
-        gender: values.gender || null,
+        gender: (values.gender ? values.gender.toUpperCase() : null) as any,
       });
       router.push(`/students/${studentId}`);
     } catch (error) {
@@ -81,8 +87,8 @@ function EditStudentContent({ studentId }: { studentId: number }) {
         <Label htmlFor="gender">Gender</Label>
         <Select id="gender" {...register("gender")}>
           <option value="">Not specified</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
         </Select>
       </div>
       <div className="flex gap-3">

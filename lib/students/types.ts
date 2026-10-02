@@ -30,29 +30,42 @@ export interface GuardianInput {
 export interface CurrentEnrollmentSummary {
   id: number;
   academic_session: { id: number; name: string };
-  class: { id: number; name: string };
+  class?: { id: number; name: string };
+  school_class?: { id: number; name: string };
   section: { id: number; name: string } | null;
 }
 
 export interface Student {
   id: number;
-  student_no: string;
-  name: string;
+  student_no?: string;
+  student_number?: string;
+  name?: string;
+  full_name?: string;
+  first_name?: string;
+  middle_name?: string | null;
+  last_name?: string;
   date_of_birth: string | null;
   gender: Gender | null;
   status: StudentStatus;
-  admission_id: number | null;
-  current_enrollment: CurrentEnrollmentSummary | null;
-  guardians: Guardian[];
+  account_status?: string | null;
+  admission_id?: number | null;
+  current_enrollment?: CurrentEnrollmentSummary | null;
+  guardians?: Guardian[];
   created_at: string;
 }
 
 export interface StudentListItem {
   id: number;
-  student_no: string;
-  name: string;
+  student_no?: string;
+  student_number?: string;
+  name?: string;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  gender?: Gender | null;
+  date_of_birth?: string | null;
   status: StudentStatus;
-  current_enrollment: CurrentEnrollmentSummary | null;
+  current_enrollment?: CurrentEnrollmentSummary | null;
 }
 
 export interface StudentFilters {
@@ -64,7 +77,11 @@ export interface StudentFilters {
 }
 
 export interface StudentPersonalInput {
-  name: string;
+  name?: string;
+  first_name?: string;
+  middle_name?: string | null;
+  last_name?: string | null;
+  student_number?: string;
   date_of_birth: string | null;
   gender: Gender | null;
 }

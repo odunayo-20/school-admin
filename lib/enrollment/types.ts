@@ -6,13 +6,20 @@
  * been added alongside it).
  */
 
-export type EnrollmentStatus = "active" | "completed" | "withdrawn";
+export type EnrollmentStatus = "active" | "completed" | "withdrawn" | "cancelled";
 
 export interface Enrollment {
   id: number;
-  student: { id: number; name: string; student_no: string };
+  student?: {
+    id: number;
+    name?: string;
+    full_name?: string;
+    student_no?: string;
+    student_number?: string;
+  };
   academic_session: { id: number; name: string };
-  class: { id: number; name: string };
+  class?: { id: number; name: string };
+  school_class?: { id: number; name: string };
   section: { id: number; name: string } | null;
   status: EnrollmentStatus;
   enrollment_date: string;
