@@ -92,33 +92,87 @@ export interface GrantAccountInput {
   role: string;
 }
 
-interface AssignmentRefs {
-  academic_session: { id: number; name: string };
+export type TeacherAssignmentStatus = "ACTIVE" | "ENDED" | "CANCELLED";
+
+export interface TeacherAssignment {
+  id: number;
+  teaching_staff_id?: number;
+  teaching_staff?: {
+    id: number;
+    staff_number: string;
+    name?: string | null;
+    email?: string | null;
+    staff_type?: StaffType;
+    status?: string;
+  };
+  class_subject: {
+    id: number;
+    school_class: { id: number; name: string; code?: string };
+    subject: { id: number; name: string; code: string };
+    status: string;
+  };
+  academic_session: {
+    id: number;
+    name: string;
+    status?: string;
+    is_current?: boolean;
+  };
+  status: TeacherAssignmentStatus;
+  notes: string | null;
+  ended_at: string | null;
+  created_at: string;
+  updated_at?: string;
+
+  // Flattened shims for compatibility with existing consumers
   class: { id: number; name: string };
-}
-
-export interface ClassTeacherAssignment extends AssignmentRefs {
-  id: number;
-  staff_id: number;
-  staff?: { id: number; name: string };
-  section: { id: number; name: string } | null;
-}
-
-export interface SubjectTeacherAssignment extends AssignmentRefs {
-  id: number;
-  staff_id: number;
-  staff?: { id: number; name: string };
   subject: { id: number; name: string; code: string };
+  staff?: { id: number; name: string };
+  staff_id: number;
+  section?: { id: number; name: string } | null;
+}
+
+export type ClassTeacherAssignment = TeacherAssignment;
+export type SubjectTeacherAssignment = TeacherAssignment;
+
+export interface TeacherAssignmentFilters {
+  teaching_staff_id?: number;
+  class_subject_id?: number;
+  academic_session_id?: number;
+  status?: TeacherAssignmentStatus;
+  page?: number;
+  per_page?: number;
+}
+
+export interface CreateTeacherAssignmentInput {
+  teaching_staff_id: number;
+  class_subject_id: number;
+  academic_session_id: number;
+  notes?: string | null;
+}
+
+export interface UpdateTeacherAssignmentInput {
+  notes?: string | null;
+}
+
+export interface EndTeacherAssignmentInput {
+  notes?: string | null;
+}
+
+export interface CancelTeacherAssignmentInput {
+  notes?: string | null;
 }
 
 export interface ClassTeacherAssignmentInput {
   academic_session_id: number;
   class_id: number;
-  section_id: number | null;
+  section_id?: number | null;
 }
 
 export interface SubjectTeacherAssignmentInput {
   academic_session_id: number;
-  class_id: number;
-  subject_id: number;
+  class_id?: number;
+  subject_id?: number;
+  class_subject_id?: number;
+  notes?: string | null;
 }
+

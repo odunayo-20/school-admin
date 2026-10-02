@@ -352,7 +352,8 @@ function ClassDetailContent({ classId }: { classId: number }) {
         {classTeachersQuery.isError && <ErrorState error={classTeachersQuery.error} />}
         {classTeachersQuery.isSuccess && classTeachersQuery.data.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            No class teacher assigned for this session yet. Assign one from a staff member&apos;s profile.
+            Teaching duties are assigned per subject. See the assigned subjects table above to view
+            teachers for each subject offering.
           </p>
         )}
         {classTeachersQuery.isSuccess && classTeachersQuery.data.length > 0 && (

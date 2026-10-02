@@ -20,11 +20,7 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { AdminOnly } from "@/components/auth/admin-only";
-import { ClassTeacherAssignments } from "@/components/staff/class-teacher-assignments";
 import { SubjectTeacherAssignments } from "@/components/staff/subject-teacher-assignments";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -46,7 +42,6 @@ import type { UserRole } from "@/lib/auth/types";
 import {
   useActivateStaff,
   useDeactivateStaff,
-  useGrantStaffAccount,
   useStaffMember,
 } from "@/lib/staff/queries";
 import type { Staff } from "@/lib/staff/types";
@@ -90,128 +85,7 @@ function getStaffTypeConfig(type: string | undefined) {
   return STAFF_TYPE_CONFIG[key as keyof typeof STAFF_TYPE_CONFIG] ?? STAFF_TYPE_CONFIG.NON_TEACHING;
 }
 
-// ── Grant Account Dialog ──────────────────────────────────────────────────────
 
-const grantAccountSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
-  role: z.enum(["registrar", "staff"]),
-});
-type GrantAccountValues = z.infer<typeof grantAccountSchema>;
-
-function GrantAccountDialog({
-  open,
-  onOpenChange,
-  staffId,
-  staffName,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  staffId: number;
-  staffName: string | null;
-}) {
-  const grantAccount = useGrantStaffAccount(staffId);
-  const [formError, setFormError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    setError,
-    reset,
-    formState: { errors },
-  } = useForm<GrantAccountValues>({
-    resolver: zodResolver(grantAccountSchema),
-    defaultValues: { email: "", role: "staff" },
-  });
-
-  async function onSubmit(values: GrantAccountValues) {
-    setFormError(null);
-    try {
-      await grantAccount.mutateAsync(values as { email: string; role: UserRole });
-      reset();
-      onOpenChange(false);
-    } catch (error) {
-      if (error instanceof ApiError && error.kind === "validation" && error.fieldErrors) {
-        for (const [field, messages] of Object.entries(error.fieldErrors)) {
-          if (field in grantAccountSchema.shape) {
-            setError(field as keyof GrantAccountValues, { message: messages[0] });
-          }
-        }
-        return;
-      }
-      setFormError(error instanceof ApiError ? error.message : "Something went wrong.");
-    }
-  }
-
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) reset();
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Grant login access</DialogTitle>
-          <DialogDescription>
-            Create a system account for{" "}
-            <strong>{staffName ?? "this staff member"}</strong>. They will be
-            able to log in immediately using the email and password you set.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-1">
-          {formError && (
-            <p
-              role="alert"
-              className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {formError}
-            </p>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="account-email">Login email</Label>
-            <Input
-              id="account-email"
-              type="email"
-              placeholder="staff@school.edu"
-              {...register("email")}
-              aria-invalid={Boolean(errors.email)}
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="account-role">System role</Label>
-            <Select id="account-role" {...register("role")}>
-              <option value="staff">Staff — standard access</option>
-              <option value="registrar">Registrar — can manage admissions &amp; students</option>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Admin roles must be granted through the Users module.
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={grantAccount.isPending}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={grantAccount.isPending}>
-              {grantAccount.isPending ? "Granting…" : "Grant access"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 // ── Deactivate Confirm Dialog ─────────────────────────────────────────────────
 
@@ -324,7 +198,6 @@ function StaffDetailContent({ staffId }: { staffId: number }) {
   const { user } = useAuth();
   const staffQuery = useStaffMember(staffId);
   const activate = useActivateStaff(staffId);
-  const [grantDialogOpen, setGrantDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
 
   if (staffQuery.isPending) return <ProfileSkeleton />;
@@ -508,53 +381,40 @@ function StaffDetailContent({ staffId }: { staffId: number }) {
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             System account
           </h3>
-          {!staff.account && canManageAccounts && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setGrantDialogOpen(true)}
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              Grant login access
-            </Button>
+          {staff.email && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Login enabled
+            </span>
           )}
         </div>
 
-        {staff.account ? (
-          <div className="flex items-center gap-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-              <UserCheck className="h-4 w-4" />
+        {staff.email ? (
+          <div className="flex items-center gap-4 rounded-xl border border-border/70 bg-muted/20 px-4 py-3.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+              <UserCheck className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground truncate">{staff.account.email}</p>
-              <p className="text-xs text-muted-foreground">Login access enabled</p>
-            </div>
-            <Badge variant="outline" className="shrink-0 capitalize text-xs">
-              {staff.account.role}
-            </Badge>
-          </div>
-        ) : staff.account_status ? (
-          // account_status comes from StaffResource flattened user field
-          <div className="flex items-center gap-4 rounded-xl border border-border/70 bg-muted/30 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600">
-              <UserCheck className="h-4 w-4" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">{staff.email}</p>
-              <p className="text-xs text-muted-foreground capitalize">
-                Account status: {staff.account_status.toLowerCase()}
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-foreground truncate">{staff.email}</p>
+                <Badge variant="outline" className="text-[10px] font-medium uppercase tracking-wider">
+                  {staff.account_status ?? "ACTIVE"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Linked system account · Signs in using this email address
               </p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 px-4 py-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-              <UserX className="h-4 w-4" />
+          <div className="flex items-center gap-4 rounded-xl border border-dashed border-border/80 px-4 py-3.5">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted text-muted-foreground shrink-0">
+              <UserX className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">No login access</p>
+              <p className="text-sm font-medium text-foreground">No login account</p>
               <p className="text-xs text-muted-foreground">
-                This staff member does not have a system account.
+                Staff accounts are provisioned during registration with a verified user login.
               </p>
             </div>
           </div>
@@ -563,19 +423,10 @@ function StaffDetailContent({ staffId }: { staffId: number }) {
 
       {/* ── Teaching assignments (only for TEACHING staff) ── */}
       {(staff.staff_type ?? "").toUpperCase() === "TEACHING" || staff.is_teacher ? (
-        <div className="space-y-6">
-          <ClassTeacherAssignments staffId={staffId} />
-          <SubjectTeacherAssignments staffId={staffId} />
-        </div>
+        <SubjectTeacherAssignments staffId={staffId} />
       ) : null}
 
-      {/* Dialogs */}
-      <GrantAccountDialog
-        open={grantDialogOpen}
-        onOpenChange={setGrantDialogOpen}
-        staffId={staffId}
-        staffName={staff.name}
-      />
+
       <DeactivateDialog
         open={deactivateDialogOpen}
         onOpenChange={setDeactivateDialogOpen}
