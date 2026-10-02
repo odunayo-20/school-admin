@@ -480,6 +480,33 @@ function StudentDetailContent({ studentId }: { studentId: number }) {
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
 
+  // ── All hooks MUST be declared before any early returns ──
+  const student = studentQuery.data ?? null;
+  const enrollments = enrollmentsQuery.data ?? [];
+
+  const rawEnrollment = useMemo(() => {
+    if (!student) return undefined;
+    return (
+      student.current_enrollment ||
+      enrollments.find((e) => e.status === "active") ||
+      enrollments[0]
+    );
+  }, [student, enrollments]);
+
+  const currentEnrollment = useMemo(() => {
+    if (!rawEnrollment) return null;
+    const resolvedClass =
+      (rawEnrollment as any).class ||
+      (rawEnrollment as any).school_class ||
+      null;
+    return {
+      ...rawEnrollment,
+      class: resolvedClass,
+      school_class: resolvedClass,
+    };
+  }, [rawEnrollment]);
+
+  // ── Early returns after all hooks ──
   if (studentQuery.isPending) {
     return (
       <div className="space-y-6">
@@ -496,7 +523,7 @@ function StudentDetailContent({ studentId }: { studentId: number }) {
     );
   }
 
-  if (studentQuery.isError || !studentQuery.data) {
+  if (studentQuery.isError || !student) {
     return (
       <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
         <h3 className="text-sm font-semibold text-destructive">Failed to load student profile</h3>
@@ -515,32 +542,12 @@ function StudentDetailContent({ studentId }: { studentId: number }) {
     );
   }
 
-  const student = studentQuery.data;
   const displayName =
     student.full_name ||
     student.name ||
     [student.first_name, student.middle_name, student.last_name].filter(Boolean).join(" ") ||
     "Learner Record";
   const displayNo = student.student_number || student.student_no || `STU-${student.id}`;
-
-  const enrollments = enrollmentsQuery.data ?? [];
-  const rawEnrollment =
-    student.current_enrollment ||
-    enrollments.find((e) => e.status === "active") ||
-    enrollments[0];
-
-  const currentEnrollment = useMemo(() => {
-    if (!rawEnrollment) return null;
-    const resolvedClass =
-      rawEnrollment.class ||
-      (rawEnrollment as any).school_class ||
-      null;
-    return {
-      ...rawEnrollment,
-      class: resolvedClass,
-      school_class: resolvedClass,
-    };
-  }, [rawEnrollment]);
 
   const currentClassName = currentEnrollment?.class?.name || null;
   const currentSectionName = currentEnrollment?.section?.name || null;
