@@ -120,11 +120,21 @@ export interface SchoolClass {
   subjects_count?: number;
 }
 
+export interface ClassFilters {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  class_level_id?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+  active_only?: boolean;
+}
+
 export interface CreateClassInput {
   class_level_id: number;
   name: string;
   code: string;
   sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
 }
 
 export interface UpdateClassInput {
@@ -132,7 +142,7 @@ export interface UpdateClassInput {
   name?: string;
   code?: string;
   sort_order?: number;
-  status?: string;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
 }
 
 export interface ClassDetail extends SchoolClass {
@@ -144,16 +154,30 @@ export interface Section {
   id: number;
   class_id?: number;
   school_class_id?: number;
+  school_class?: {
+    id: number;
+    name: string;
+    code: string;
+  } | null;
   name: string;
   code?: string;
   sort_order?: number;
-  status?: string;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+  students_count?: number;
 }
 
 export interface CreateSectionInput {
   name: string;
   code?: string;
   sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+}
+
+export interface UpdateSectionInput {
+  name?: string;
+  code?: string;
+  sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
 }
 
 export interface Subject {

@@ -5,6 +5,7 @@ import * as api from "@/lib/academics/api";
 import type {
   AcademicSession,
   AcademicSessionFilters,
+  ClassFilters,
   CreateAcademicSessionInput,
   CreateTermInput,
   GradingScale,
@@ -21,7 +22,7 @@ const keys = {
     ["academic-sessions", pageOrFilters] as const,
   terms: (sessionId: number) => ["terms", sessionId] as const,
   classLevels: (page: number) => ["class-levels", page] as const,
-  classes: (page: number) => ["classes", page] as const,
+  classes: (pageOrFilters?: number | ClassFilters) => ["classes", pageOrFilters] as const,
   classDetail: (id: number) => ["classes", "detail", id] as const,
   subjects: (page: number) => ["subjects", page] as const,
   gradingScales: ["grading-scales"] as const,
@@ -159,8 +160,11 @@ export const useClassLevels = (page = 1) =>
   useQuery({ queryKey: keys.classLevels(page), queryFn: () => api.getClassLevels(page) });
 
 // Classes
-export const useClasses = (page: number) =>
-  useQuery({ queryKey: keys.classes(page), queryFn: () => api.getClasses(page) });
+export const useClasses = (pageOrFilters: number | ClassFilters = 1) =>
+  useQuery({
+    queryKey: keys.classes(pageOrFilters),
+    queryFn: () => api.getClasses(pageOrFilters),
+  });
 
 export const useClassDetail = (id: number) =>
   useQuery({ queryKey: keys.classDetail(id), queryFn: () => api.getClass(id), enabled: id > 0 });
@@ -183,6 +187,18 @@ export function useUpdateClass(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       queryClient.invalidateQueries({ queryKey: keys.classDetail(id) });
+      queryClient.invalidateQueries({ queryKey: ["class-levels"] });
+    },
+  });
+}
+
+export function useDeleteClass() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteClass(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["classes"] });
+      queryClient.invalidateQueries({ queryKey: ["class-levels"] });
     },
   });
 }

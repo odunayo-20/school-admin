@@ -5,6 +5,7 @@ import type {
   AcademicSession,
   AcademicSessionFilters,
   ClassDetail,
+  ClassFilters,
   ClassLevel,
   CreateAcademicSessionInput,
   CreateClassInput,
@@ -19,6 +20,7 @@ import type {
   Term,
   UpdateAcademicSessionInput,
   UpdateClassInput,
+  UpdateSectionInput,
   UpdateTermInput,
 } from "@/lib/academics/types";
 
@@ -82,7 +84,21 @@ export const getClassLevels = (page = 1) =>
   apiClient.get<Paginated<ClassLevel>>(`${E.classLevels}?page=${page}&active_only=true`);
 
 // Classes
-export const getClasses = (page = 1) => apiClient.get<Paginated<SchoolClass>>(`${E.classes}?page=${page}`);
+export const getClasses = (pageOrFilters: number | ClassFilters = 1) => {
+  const query = new URLSearchParams();
+  if (typeof pageOrFilters === "number") {
+    query.set("page", String(pageOrFilters));
+  } else {
+    if (pageOrFilters.page) query.set("page", String(pageOrFilters.page));
+    if (pageOrFilters.per_page) query.set("per_page", String(pageOrFilters.per_page));
+    if (pageOrFilters.search?.trim()) query.set("search", pageOrFilters.search.trim());
+    if (pageOrFilters.class_level_id) query.set("class_level_id", String(pageOrFilters.class_level_id));
+    if (pageOrFilters.status) query.set("status", pageOrFilters.status);
+    if (pageOrFilters.active_only !== undefined) query.set("active_only", String(pageOrFilters.active_only));
+  }
+  const qs = query.toString();
+  return apiClient.get<Paginated<SchoolClass>>(`${E.classes}${qs ? `?${qs}` : ""}`);
+};
 
 export const getClass = async (id: number): Promise<ClassDetail> => {
   const [classData, sectionsRes, classSubjectsRes] = await Promise.all([
@@ -115,16 +131,19 @@ export const createClass = (data: CreateClassInput) =>
 export const updateClass = (id: number, data: UpdateClassInput) =>
   apiClient.put<SchoolClass>(E.class(id), { ...data });
 
+export const deleteClass = (id: number) => apiClient.delete<null>(E.class(id));
+
 // Sections
 export const createSection = (classId: number, data: CreateSectionInput) =>
   apiClient.post<Section>(E.sections, {
     school_class_id: classId,
     name: data.name,
     code: data.code || data.name.trim().toUpperCase(),
-    sort_order: data.sort_order,
+    sort_order: data.sort_order ?? 0,
+    status: data.status,
   });
 
-export const updateSection = (id: number, data: Partial<CreateSectionInput>) =>
+export const updateSection = (id: number, data: UpdateSectionInput) =>
   apiClient.put<Section>(E.section(id), {
     ...data,
     code: data.code || (data.name ? data.name.trim().toUpperCase() : undefined),
