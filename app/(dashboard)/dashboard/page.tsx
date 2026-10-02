@@ -576,10 +576,13 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y divide-border/60">
                 {recentAdmissions.map((adm) => {
-                  const statusColors = {
+                  const statusKey = (adm.status || "").toLowerCase();
+                  const statusColors: Record<string, string> = {
                     pending: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
                     approved: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                    admitted: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
                     rejected: "border-destructive/20 bg-destructive/10 text-destructive",
+                    withdrawn: "border-muted-foreground/30 bg-muted/40 text-muted-foreground",
                   };
 
                   return (
@@ -607,7 +610,7 @@ export default function DashboardPage() {
                         <span
                           className={cn(
                             "rounded-full border px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider",
-                            statusColors[adm.status] || "bg-muted text-muted-foreground"
+                            statusColors[statusKey] || "bg-muted text-muted-foreground"
                           )}
                         >
                           {adm.status}
