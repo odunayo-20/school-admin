@@ -36,4 +36,6 @@ export const ACADEMIC_ENDPOINTS = {
 
   gradingScales: "/api/grading-scales",
   gradingScale: (id: number) => `/api/grading-scales/${id}`,
+  calculateGrade: (id: number) => `/api/grading-scales/${id}/calculate`,
 };
+

@@ -9,9 +9,12 @@ import type {
   ClassLevel,
   CreateAcademicSessionInput,
   CreateClassInput,
+  CreateGradingScaleInput,
   CreateSectionInput,
   CreateTermInput,
+  GradingCalculationResult,
   GradingScale,
+  GradingScaleFilters,
   Paginated,
   School,
   SchoolClass,
@@ -20,9 +23,11 @@ import type {
   Term,
   UpdateAcademicSessionInput,
   UpdateClassInput,
+  UpdateGradingScaleInput,
   UpdateSectionInput,
   UpdateTermInput,
 } from "@/lib/academics/types";
+
 
 // School & Context
 export const getSchool = () => apiClient.get<School>(E.school);
@@ -185,12 +190,83 @@ export const unassignSubjectFromClass = async (classId: number, subjectId: numbe
 };
 
 // Grading configuration
-export const getGradingScales = async (): Promise<GradingScale[]> => {
-  const res = await apiClient.get<GradingScale[] | { data: GradingScale[] }>(E.gradingScales);
-  return Array.isArray(res) ? res : (res?.data ?? []);
+export const getGradingScales = async (
+  filters: GradingScaleFilters = {}
+): Promise<GradingScale[] & { meta?: Paginated<GradingScale>["meta"] }> => {
+  const query = new URLSearchParams();
+  if (filters.page) query.set("page", String(filters.page));
+  if (filters.per_page) query.set("per_page", String(filters.per_page));
+  if (filters.search) query.set("search", filters.search);
+  if (filters.class_level_id) query.set("class_level_id", String(filters.class_level_id));
+  if (filters.status) query.set("status", filters.status);
+  if (filters.active_only !== undefined) query.set("active_only", String(filters.active_only));
+
+  const qs = query.toString();
+  const url = qs ? `${E.gradingScales}?${qs}` : E.gradingScales;
+  const res = await apiClient.get<Paginated<GradingScale> | { data: GradingScale[] } | GradingScale[]>(url);
+
+  const items: GradingScale[] = Array.isArray(res) ? res : (res?.data ?? []);
+  const meta = (res && typeof res === "object" && "meta" in res) ? (res as Paginated<GradingScale>).meta : undefined;
+  return Object.assign([...items], { meta });
 };
-export const createGradingScale = (data: Omit<GradingScale, "id">) =>
-  apiClient.post<GradingScale>(E.gradingScales, { ...data });
-export const updateGradingScale = (id: number, data: Omit<GradingScale, "id">) =>
-  apiClient.put<GradingScale>(E.gradingScale(id), { ...data });
-export const deleteGradingScale = (id: number) => apiClient.delete<void>(E.gradingScale(id));
+
+export const getGradingScale = async (id: number): Promise<GradingScale> => {
+  const res = await apiClient.get<{ data: GradingScale } | GradingScale>(E.gradingScale(id));
+  return (res && "data" in res && res.data) ? res.data : (res as GradingScale);
+};
+
+export const createGradingScale = async (
+  data: CreateGradingScaleInput | Omit<GradingScale, "id">
+): Promise<GradingScale> => {
+  const res = await apiClient.post<{ data: GradingScale } | GradingScale>(
+    E.gradingScales,
+    data as unknown as Record<string, unknown>
+  );
+  return (res && "data" in res && res.data) ? res.data : (res as GradingScale);
+};
+
+export const updateGradingScale = async (
+  id: number,
+  data: UpdateGradingScaleInput | Omit<GradingScale, "id">
+): Promise<GradingScale> => {
+  const res = await apiClient.put<{ data: GradingScale } | GradingScale>(
+    E.gradingScale(id),
+    data as unknown as Record<string, unknown>
+  );
+  return (res && "data" in res && res.data) ? res.data : (res as GradingScale);
+};
+
+export const calculateGrade = async (
+  id: number,
+  percentage: number
+): Promise<GradingCalculationResult> => {
+  const res = await apiClient.post<{ data: GradingCalculationResult } | GradingCalculationResult>(
+    E.calculateGrade(id),
+    { percentage }
+  );
+  return (res && "data" in res && res.data) ? res.data : (res as GradingCalculationResult);
+};
+
+export const archiveGradingScale = async (scale: GradingScale): Promise<GradingScale> => {
+  return updateGradingScale(scale.id, {
+    name: scale.name,
+    code: scale.code,
+    sort_order: scale.sort_order ?? 0,
+    status: "ARCHIVED",
+    items: (scale.items ?? []).map((item) => ({
+      grade: item.grade,
+      min_percentage: Number(item.min_percentage),
+      max_percentage: Number(item.max_percentage),
+      grade_point: item.grade_point !== null && item.grade_point !== undefined ? Number(item.grade_point) : null,
+      remark: item.remark ?? null,
+    })),
+  });
+};
+
+export const deleteGradingScale = async (id: number): Promise<void> => {
+  // Backend returns 405 Method Not Allowed for DELETE /grading-scales/{id}.
+  // We fetch and archive the scale to retire it safely.
+  const scale = await getGradingScale(id);
+  await archiveGradingScale(scale);
+};
+

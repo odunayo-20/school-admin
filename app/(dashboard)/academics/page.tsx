@@ -28,6 +28,7 @@ import {
   useAcademicSessions,
   useClasses,
   useClassLevels,
+  useGradingScaleDetail,
   useGradingScales,
   useSubjects,
   useTerms,
@@ -64,16 +65,19 @@ function AcademicOverviewContent() {
   const totalSubjects = subjectsQuery.data?.meta.total ?? subjects.length;
   const totalTeachers = teachersQuery.data?.meta.total ?? 0;
   const gradingScales = gradingQuery.data ?? [];
-  const activeScale = gradingScales[0];
+  const activeScale =
+    gradingScales.find((s) => s.status === "ACTIVE") ?? gradingScales[0] ?? null;
+
+  // Detail query to load full bands for active scale (since list endpoint omits items)
+  const activeScaleDetailQuery = useGradingScaleDetail(activeScale?.id ?? 0);
+  const resolvedActiveScale = activeScaleDetailQuery.data ?? activeScale;
+
   const gradeBands = useMemo(() => {
-    if (activeScale?.items && activeScale.items.length > 0) {
-      return activeScale.items;
-    }
-    if (gradingScales.length > 0 && gradingScales[0].grade) {
-      return gradingScales;
+    if (resolvedActiveScale?.items && resolvedActiveScale.items.length > 0) {
+      return resolvedActiveScale.items;
     }
     return [];
-  }, [gradingScales, activeScale]);
+  }, [resolvedActiveScale]);
 
   // Group classes by class_level_id
   const classesByLevel = useMemo(() => {
@@ -737,7 +741,7 @@ function AcademicOverviewContent() {
               </Link>
             </div>
 
-            {gradingQuery.isPending ? (
+            {gradingQuery.isPending || (Boolean(activeScale?.id) && activeScaleDetailQuery.isPending) ? (
               <div className="space-y-2">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <Skeleton key={i} className="h-8 w-full rounded" />
@@ -769,8 +773,8 @@ function AcademicOverviewContent() {
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {gradeBands.map((item, idx) => {
-                      const minVal = item.min_percentage ?? item.min_score ?? 0;
-                      const maxVal = item.max_percentage ?? item.max_score ?? 100;
+                      const minVal = Number(item.min_percentage ?? item.min_score ?? 0);
+                      const maxVal = Number(item.max_percentage ?? item.max_score ?? 100);
                       return (
                         <tr key={item.id ?? idx} className="hover:bg-muted/30">
                           <td className="py-2 px-3 font-bold text-foreground font-mono">

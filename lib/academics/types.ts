@@ -189,21 +189,33 @@ export interface Subject {
 export interface GradingScaleItem {
   id?: number;
   grade: string;
-  min_percentage?: number;
-  max_percentage?: number;
+  min_percentage: number | string;
+  max_percentage: number | string;
+  grade_point?: number | string | null;
+  remark?: string | null;
+  // Legacy aliases
   min_score?: number;
   max_score?: number;
-  grade_point: number;
-  remark: string | null;
 }
 
 export interface GradingScale {
   id: number;
-  name?: string;
-  code?: string;
+  name: string;
+  code: string;
+  sort_order?: number;
+  status: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
   class_level_id?: number;
-  status?: string;
+  class_level?: {
+    id: number;
+    name: string;
+    code: string;
+    status: string;
+  } | null;
   items?: GradingScaleItem[];
+  created_at?: string;
+  updated_at?: string;
+
+  // Legacy flat fields for backward compatibility
   grade?: string;
   min_percentage?: number;
   max_percentage?: number;
@@ -212,3 +224,46 @@ export interface GradingScale {
   grade_point?: number;
   remark?: string | null;
 }
+
+export interface GradingScaleFilters {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  class_level_id?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | "";
+  active_only?: boolean;
+}
+
+export interface GradingScaleItemInput {
+  id?: number;
+  grade: string;
+  min_percentage: number;
+  max_percentage: number;
+  grade_point?: number | null;
+  remark?: string | null;
+}
+
+export interface CreateGradingScaleInput {
+  class_level_id: number;
+  name: string;
+  code: string;
+  sort_order?: number;
+  items: GradingScaleItemInput[];
+}
+
+export interface UpdateGradingScaleInput {
+  name: string;
+  code: string;
+  sort_order?: number;
+  status?: "ACTIVE" | "INACTIVE" | "ARCHIVED" | string;
+  items: GradingScaleItemInput[];
+}
+
+export interface GradingCalculationResult {
+  percentage: number;
+  grade: string | null;
+  grade_point: string | null;
+  remark: string | null;
+  matched_band: GradingScaleItem | null;
+}
+

@@ -7,14 +7,19 @@ import type {
   AcademicSessionFilters,
   ClassFilters,
   CreateAcademicSessionInput,
+  CreateGradingScaleInput,
   CreateTermInput,
+  GradingCalculationResult,
   GradingScale,
+  GradingScaleFilters,
   School,
   Subject,
   Term,
   UpdateAcademicSessionInput,
+  UpdateGradingScaleInput,
   UpdateTermInput,
 } from "@/lib/academics/types";
+
 
 const keys = {
   school: ["school"] as const,
@@ -25,8 +30,10 @@ const keys = {
   classes: (pageOrFilters?: number | ClassFilters) => ["classes", pageOrFilters] as const,
   classDetail: (id: number) => ["classes", "detail", id] as const,
   subjects: (page: number) => ["subjects", page] as const,
-  gradingScales: ["grading-scales"] as const,
+  gradingScales: (filters?: GradingScaleFilters) => ["grading-scales", filters] as const,
+  gradingScaleDetail: (id: number) => ["grading-scales", "detail", id] as const,
 };
+
 
 // School & Academic Context
 export const useSchool = () => useQuery({ queryKey: keys.school, queryFn: api.getSchool });
@@ -285,23 +292,55 @@ export function useUnassignSubjectFromClass(classId: number) {
 }
 
 // Grading configuration
-export const useGradingScales = () =>
-  useQuery({ queryKey: keys.gradingScales, queryFn: api.getGradingScales });
+export const useGradingScales = (filters?: GradingScaleFilters) =>
+  useQuery({
+    queryKey: keys.gradingScales(filters),
+    queryFn: () => api.getGradingScales(filters),
+  });
+
+export const useGradingScaleDetail = (id: number) =>
+  useQuery({
+    queryKey: keys.gradingScaleDetail(id),
+    queryFn: () => api.getGradingScale(id),
+    enabled: id > 0,
+  });
 
 export function useCreateGradingScale() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Omit<GradingScale, "id">) => api.createGradingScale(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.gradingScales }),
+    mutationFn: (data: CreateGradingScaleInput | Omit<GradingScale, "id">) =>
+      api.createGradingScale(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["grading-scales"] });
+    },
   });
 }
 
 export function useUpdateGradingScale() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Omit<GradingScale, "id"> }) =>
-      api.updateGradingScale(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.gradingScales }),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateGradingScaleInput | Omit<GradingScale, "id">;
+    }) => api.updateGradingScale(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["grading-scales"] });
+      queryClient.invalidateQueries({ queryKey: keys.gradingScaleDetail(variables.id) });
+    },
+  });
+}
+
+export function useArchiveGradingScale() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (scale: GradingScale) => api.archiveGradingScale(scale),
+    onSuccess: (_, scale) => {
+      queryClient.invalidateQueries({ queryKey: ["grading-scales"] });
+      queryClient.invalidateQueries({ queryKey: keys.gradingScaleDetail(scale.id) });
+    },
   });
 }
 
@@ -309,6 +348,16 @@ export function useDeleteGradingScale() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.deleteGradingScale(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.gradingScales }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["grading-scales"] });
+    },
   });
 }
+
+export function useCalculateGrade() {
+  return useMutation({
+    mutationFn: ({ id, percentage }: { id: number; percentage: number }) =>
+      api.calculateGrade(id, percentage),
+  });
+}
+
