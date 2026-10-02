@@ -12,9 +12,12 @@ export const ACADEMIC_ENDPOINTS = {
   academicSessions: "/api/academic-sessions",
   academicSession: (id: number) => `/api/academic-sessions/${id}`,
   activateAcademicSession: (id: number) => `/api/academic-sessions/${id}/activate`,
+  deleteAcademicSession: (id: number) => `/api/academic-sessions/${id}`,
 
   terms: (sessionId: number) => `/api/academic-sessions/${sessionId}/terms`,
   term: (id: number) => `/api/terms/${id}`,
+  activateTerm: (id: number) => `/api/terms/${id}/activate`,
+  deleteTerm: (id: number) => `/api/terms/${id}`,
 
   classLevels: "/api/class-levels",
   classLevel: (id: number) => `/api/class-levels/${id}`,

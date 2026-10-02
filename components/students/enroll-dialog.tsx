@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, Layers, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -42,20 +42,13 @@ export function EnrollDialog({
   const sections = classId ? classDetailQuery.data?.sections ?? [] : [];
   const isLoadingSections = Boolean(classId && classDetailQuery.isPending);
 
-  // Auto-select active session if available
-  useEffect(() => {
-    if (!sessionId && sessions.length > 0) {
-      const active = sessions.find((s) => s.is_current || s.status === "ACTIVE") ?? sessions[0];
-      if (active) setSessionId(String(active.id));
-    }
-  }, [sessions, sessionId]);
+  // Auto-select active session if available, and auto-select section when only one section exists
+  const autoActiveSession = useMemo(() => {
+    return sessions.find((s) => s.is_current || s.status === "ACTIVE") ?? sessions[0];
+  }, [sessions]);
 
-  // Auto-select section when only one section exists
-  useEffect(() => {
-    if (sections.length === 1 && !sectionId) {
-      setSectionId(String(sections[0].id));
-    }
-  }, [sections, sectionId]);
+  const effectiveSessionId = sessionId || (autoActiveSession ? String(autoActiveSession.id) : "");
+  const effectiveSectionId = sectionId || (sections.length === 1 ? String(sections[0].id) : "");
 
   function reset() {
     setSessionId("");
@@ -66,7 +59,7 @@ export function EnrollDialog({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!sessionId) {
+    if (!effectiveSessionId) {
       setFormError("Please select an academic session.");
       return;
     }
@@ -74,7 +67,7 @@ export function EnrollDialog({
       setFormError("Please select an instructional class.");
       return;
     }
-    if (!sectionId) {
+    if (!effectiveSectionId) {
       setFormError("A section is required. Every student must be placed into a specific class arm/section.");
       return;
     }
@@ -83,9 +76,9 @@ export function EnrollDialog({
     try {
       await createEnrollment.mutateAsync({
         student_id: studentId,
-        academic_session_id: Number(sessionId),
+        academic_session_id: Number(effectiveSessionId),
         class_id: Number(classId),
-        section_id: Number(sectionId),
+        section_id: Number(effectiveSectionId),
       });
       reset();
       onOpenChange(false);
@@ -96,9 +89,9 @@ export function EnrollDialog({
 
   const isSubmitDisabled =
     createEnrollment.isPending ||
-    !sessionId ||
+    !effectiveSessionId ||
     !classId ||
-    !sectionId ||
+    !effectiveSectionId ||
     isLoadingSections;
 
   return (
@@ -138,7 +131,7 @@ export function EnrollDialog({
             </Label>
             <Select
               id="enroll-session"
-              value={sessionId}
+              value={effectiveSessionId}
               onChange={(e) => {
                 setSessionId(e.target.value);
                 setFormError(null);
@@ -198,7 +191,7 @@ export function EnrollDialog({
               ) : sections.length > 0 ? (
                 <Select
                   id="enroll-section"
-                  value={sectionId}
+                  value={effectiveSectionId}
                   onChange={(e) => {
                     setSectionId(e.target.value);
                     setFormError(null);

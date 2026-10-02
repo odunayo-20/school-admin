@@ -38,16 +38,60 @@ export interface AcademicSession {
   start_date: string;
   end_date: string;
   is_current: boolean;
-  status?: string;
+  status?: "UPCOMING" | "ACTIVE" | "COMPLETED" | string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Term {
   id: number;
   academic_session_id: number;
   name: string;
+  term_number: number;
   start_date: string;
   end_date: string;
   is_current: boolean;
+  status?: "UPCOMING" | "ACTIVE" | "COMPLETED" | string;
+  created_at?: string;
+  updated_at?: string;
+  academic_session?: {
+    id: number;
+    name: string;
+    status: string;
+  } | null;
+}
+
+export interface CreateAcademicSessionInput {
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface UpdateAcademicSessionInput {
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface AcademicSessionFilters {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  status?: "UPCOMING" | "ACTIVE" | "COMPLETED" | "";
+}
+
+export interface CreateTermInput {
+  name: string;
+  term_number: number;
+  start_date: string;
+  end_date: string;
+}
+
+export interface UpdateTermInput {
+  name: string;
+  term_number: number;
+  start_date: string;
+  end_date: string;
 }
 
 export interface ClassLevel {

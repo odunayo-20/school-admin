@@ -4,17 +4,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as api from "@/lib/academics/api";
 import type {
   AcademicSession,
+  AcademicSessionFilters,
+  CreateAcademicSessionInput,
+  CreateTermInput,
   GradingScale,
   School,
-  SchoolClass,
-  Section,
   Subject,
   Term,
+  UpdateAcademicSessionInput,
+  UpdateTermInput,
 } from "@/lib/academics/types";
 
 const keys = {
   school: ["school"] as const,
-  sessions: (page: number) => ["academic-sessions", page] as const,
+  sessions: (pageOrFilters?: number | AcademicSessionFilters) =>
+    ["academic-sessions", pageOrFilters] as const,
   terms: (sessionId: number) => ["terms", sessionId] as const,
   classLevels: (page: number) => ["class-levels", page] as const,
   classes: (page: number) => ["classes", page] as const,
@@ -37,15 +41,21 @@ export function useUpdateSchool() {
 }
 
 // Academic Sessions
-export const useAcademicSessions = (page: number) =>
-  useQuery({ queryKey: keys.sessions(page), queryFn: () => api.getAcademicSessions(page) });
+export const useAcademicSessions = (pageOrFilters: number | AcademicSessionFilters = 1) =>
+  useQuery({
+    queryKey: keys.sessions(pageOrFilters),
+    queryFn: () => api.getAcademicSessions(pageOrFilters),
+  });
 
 export function useCreateAcademicSession() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Pick<AcademicSession, "name" | "start_date" | "end_date">) =>
+    mutationFn: (data: CreateAcademicSessionInput) =>
       api.createAcademicSession(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["academic-sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
   });
 }
 
@@ -57,9 +67,12 @@ export function useUpdateAcademicSession() {
       data,
     }: {
       id: number;
-      data: Pick<AcademicSession, "name" | "start_date" | "end_date">;
+      data: UpdateAcademicSessionInput;
     }) => api.updateAcademicSession(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["academic-sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
   });
 }
 
@@ -67,7 +80,22 @@ export function useActivateAcademicSession() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.activateAcademicSession(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["academic-sessions"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["terms"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
+  });
+}
+
+export function useDeleteAcademicSession() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteAcademicSession(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
   });
 }
 
@@ -82,18 +110,47 @@ export const useTerms = (sessionId: number) =>
 export function useCreateTerm(sessionId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Pick<Term, "name" | "start_date" | "end_date">) =>
+    mutationFn: (data: CreateTermInput) =>
       api.createTerm(sessionId, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.terms(sessionId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.terms(sessionId) });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
   });
 }
 
 export function useUpdateTerm(sessionId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Pick<Term, "name" | "start_date" | "end_date"> }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateTermInput }) =>
       api.updateTerm(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.terms(sessionId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.terms(sessionId) });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
+  });
+}
+
+export function useActivateTerm(sessionId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.activateTerm(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.terms(sessionId) });
+      queryClient.invalidateQueries({ queryKey: ["academic-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
+  });
+}
+
+export function useDeleteTerm(sessionId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteTerm(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.terms(sessionId) });
+      queryClient.invalidateQueries({ queryKey: ["academic-context"] });
+    },
   });
 }
 

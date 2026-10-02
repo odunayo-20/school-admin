@@ -3,10 +3,13 @@ import { ACADEMIC_ENDPOINTS as E } from "@/lib/academics/endpoints";
 import type {
   AcademicContext,
   AcademicSession,
+  AcademicSessionFilters,
   ClassDetail,
   ClassLevel,
+  CreateAcademicSessionInput,
   CreateClassInput,
   CreateSectionInput,
+  CreateTermInput,
   GradingScale,
   Paginated,
   School,
@@ -14,7 +17,9 @@ import type {
   Section,
   Subject,
   Term,
+  UpdateAcademicSessionInput,
   UpdateClassInput,
+  UpdateTermInput,
 } from "@/lib/academics/types";
 
 // School & Context
@@ -24,28 +29,53 @@ export const updateSchool = (data: Omit<School, "id">) =>
   apiClient.put<School>(E.school, { ...data });
 
 // Academic Sessions
-export const getAcademicSessions = (page = 1) =>
-  apiClient.get<Paginated<AcademicSession>>(`${E.academicSessions}?page=${page}`);
-export const createAcademicSession = (data: Pick<AcademicSession, "name" | "start_date" | "end_date">) =>
+export const getAcademicSessions = (pageOrFilters: number | AcademicSessionFilters = 1) => {
+  const query = new URLSearchParams();
+  if (typeof pageOrFilters === "number") {
+    query.set("page", String(pageOrFilters));
+  } else {
+    if (pageOrFilters.page) query.set("page", String(pageOrFilters.page));
+    if (pageOrFilters.per_page) query.set("per_page", String(pageOrFilters.per_page));
+    if (pageOrFilters.search?.trim()) query.set("search", pageOrFilters.search.trim());
+    if (pageOrFilters.status) query.set("status", pageOrFilters.status);
+  }
+  const qs = query.toString();
+  return apiClient.get<Paginated<AcademicSession>>(`${E.academicSessions}${qs ? `?${qs}` : ""}`);
+};
+
+export const createAcademicSession = (data: CreateAcademicSessionInput) =>
   apiClient.post<AcademicSession>(E.academicSessions, { ...data });
+
 export const updateAcademicSession = (
   id: number,
-  data: Pick<AcademicSession, "name" | "start_date" | "end_date">
+  data: UpdateAcademicSessionInput
 ) => apiClient.put<AcademicSession>(E.academicSession(id), { ...data });
+
 export const activateAcademicSession = (id: number) =>
   apiClient.post<AcademicSession>(E.activateAcademicSession(id));
 
+export const deleteAcademicSession = (id: number) =>
+  apiClient.delete<null>(E.deleteAcademicSession(id));
+
 // Terms (nested under a session)
 export const getTerms = async (sessionId: number): Promise<Term[]> => {
-  const res = await apiClient.get<any>(E.terms(sessionId));
+  const res = await apiClient.get<Term[] | { data: Term[] }>(E.terms(sessionId));
   return Array.isArray(res) ? res : (res?.data ?? []);
 };
+
 export const createTerm = (
   sessionId: number,
-  data: Pick<Term, "name" | "start_date" | "end_date">
+  data: CreateTermInput
 ) => apiClient.post<Term>(E.terms(sessionId), { ...data });
-export const updateTerm = (id: number, data: Pick<Term, "name" | "start_date" | "end_date">) =>
+
+export const updateTerm = (id: number, data: UpdateTermInput) =>
   apiClient.put<Term>(E.term(id), { ...data });
+
+export const activateTerm = (id: number) =>
+  apiClient.post<Term>(E.activateTerm(id));
+
+export const deleteTerm = (id: number) =>
+  apiClient.delete<null>(E.deleteTerm(id));
 
 // Class Levels
 export const getClassLevels = (page = 1) =>
@@ -137,7 +167,7 @@ export const unassignSubjectFromClass = async (classId: number, subjectId: numbe
 
 // Grading configuration
 export const getGradingScales = async (): Promise<GradingScale[]> => {
-  const res = await apiClient.get<any>(E.gradingScales);
+  const res = await apiClient.get<GradingScale[] | { data: GradingScale[] }>(E.gradingScales);
   return Array.isArray(res) ? res : (res?.data ?? []);
 };
 export const createGradingScale = (data: Omit<GradingScale, "id">) =>
