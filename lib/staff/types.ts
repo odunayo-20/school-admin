@@ -1,76 +1,95 @@
-import type { UserRole } from "@/lib/auth/types";
-
 /**
- * PROPOSED CONTRACT for Module 04 (Staff Management). No Laravel backend
- * exists yet — built ahead per the project owner's direction, same as
- * Module 02. Key domain decisions (documented in the Module 04 report,
- * not re-derived here):
- *
- *  - Staff is its own record, distinct from User. `account` is nullable:
- *    a staff member does not necessarily have login access.
- *  - "Teacher" is not a separate model — `is_teacher` is a flag on Staff,
- *    and actual teaching work is tracked via two assignment types that
- *    reuse Module 02's sessions/classes/sections/subjects:
- *      - ClassTeacherAssignment (homeroom-style: session + class + section)
- *      - SubjectTeacherAssignment (session + class + subject)
- *  - No Department entity (Module 02 never established one) — staff carry
- *    a free-text `designation` instead.
- *  - No delete: only `status` (active/inactive) is mutable.
+ * Module 03 — Staff Management
+ * Reconciled against real Laravel backend:
+ *   - StaffResource: id, staff_number, name, email, staff_type, designation,
+ *     employment_date, phone, status, account_status, created_at, updated_at
+ *   - StaffType enum: "TEACHING" | "NON_TEACHING"
+ *   - EmploymentStatus enum: "ACTIVE" | "INACTIVE" | "TERMINATED"
+ *   - StoreStaffRequest: name, email, password, password_confirmation,
+ *     staff_type (required), staff_number?, employment_date?, phone?, designation?
+ *   - UpdateStaffRequest: same employment fields + optional status
+ *   - activate: POST /staff/{id}/activate
+ *   - deactivate: POST /staff/{id}/deactivate
  */
 
-export type StaffStatus = "active" | "inactive";
-export type EmploymentType = "full_time" | "part_time" | "contract";
+export type StaffType = "TEACHING" | "NON_TEACHING";
+export type EmploymentStatus = "ACTIVE" | "INACTIVE" | "TERMINATED";
 
-export interface StaffAccount {
-  id: number;
-  email: string;
-  role: UserRole;
-}
+// Legacy aliases for backward compat
+export type StaffStatus = EmploymentStatus | "active" | "inactive";
+export type EmploymentType = "full_time" | "part_time" | "contract";
 
 export interface Staff {
   id: number;
-  staff_no: string;
-  name: string;
+  staff_number: string;
+  // name/email live on the linked User account
+  name: string | null;
   email: string | null;
-  phone: string | null;
+  staff_type: StaffType;
   designation: string | null;
-  employment_type: EmploymentType;
-  date_joined: string | null;
-  is_teacher: boolean;
-  status: StaffStatus;
-  account: StaffAccount | null;
+  employment_date: string | null;
+  phone: string | null;
+  status: EmploymentStatus | string;
+  account_status: string | null;
   created_at: string;
+  updated_at?: string;
+
+  // Legacy aliases (may be present for backward compat)
+  staff_no?: string;
+  is_teacher?: boolean;
+  employment_type?: EmploymentType;
+  date_joined?: string | null;
+  account?: { id: number; email: string; role: string } | null;
 }
 
-export interface StaffListItem
-  extends Pick<
-    Staff,
-    "id" | "staff_no" | "name" | "email" | "phone" | "designation" | "is_teacher" | "status"
-  > {
-  account: Pick<StaffAccount, "role"> | null;
-}
+export type StaffListItem = Staff;
 
 export interface StaffFilters {
   search?: string;
-  status?: StaffStatus;
+  status?: string;
+  staff_type?: StaffType;
+  /** Legacy compat — mapped to staff_type */
   employment_type?: EmploymentType;
   is_teacher?: boolean;
   page?: number;
 }
 
-export interface StaffInput {
+/** Payload for POST /api/staff (create) */
+export interface StaffCreateInput {
   name: string;
-  email: string | null;
-  phone: string | null;
-  designation: string | null;
-  employment_type: EmploymentType;
-  date_joined: string | null;
-  is_teacher: boolean;
+  email: string;
+  password: string;
+  password_confirmation: string;
+  staff_type: StaffType;
+  staff_number?: string | null;
+  employment_date?: string | null;
+  phone?: string | null;
+  designation?: string | null;
 }
+
+/** Payload for PUT /api/staff/{id} (update) */
+export interface StaffUpdateInput {
+  name: string;
+  email: string;
+  staff_type: StaffType;
+  staff_number?: string | null;
+  employment_date?: string | null;
+  phone?: string | null;
+  designation?: string | null;
+  status?: EmploymentStatus;
+}
+
+/** Legacy alias kept for backward compatibility with existing form components */
+export type StaffInput = StaffUpdateInput & {
+  // Legacy form fields mapped during submission
+  is_teacher?: boolean;
+  date_joined?: string | null;
+  employment_type?: EmploymentType;
+};
 
 export interface GrantAccountInput {
   email: string;
-  role: UserRole;
+  role: string;
 }
 
 interface AssignmentRefs {
@@ -81,9 +100,6 @@ interface AssignmentRefs {
 export interface ClassTeacherAssignment extends AssignmentRefs {
   id: number;
   staff_id: number;
-  /** Only populated when fetched from a class-scoped endpoint (Module 05's
-   * class academic view) — the staff-scoped endpoints Module 04 uses don't
-   * need it since the staff identity is already known from context. */
   staff?: { id: number; name: string };
   section: { id: number; name: string } | null;
 }

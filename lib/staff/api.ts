@@ -6,10 +6,10 @@ import type {
   ClassTeacherAssignmentInput,
   GrantAccountInput,
   Staff,
+  StaffCreateInput,
   StaffFilters,
-  StaffInput,
   StaffListItem,
-  StaffStatus,
+  StaffUpdateInput,
   SubjectTeacherAssignment,
   SubjectTeacherAssignmentInput,
 } from "@/lib/staff/types";
@@ -18,9 +18,8 @@ function buildQuery(filters: StaffFilters): string {
   const params = new URLSearchParams();
   if (filters.search) params.set("search", filters.search);
   if (filters.status) params.set("status", filters.status);
-  if (filters.employment_type) params.set("employment_type", filters.employment_type);
-  if (filters.is_teacher !== undefined) params.set("is_teacher", String(filters.is_teacher));
-  params.set("page", String(filters.page ?? 1));
+  if (filters.staff_type) params.set("staff_type", filters.staff_type);
+  if (filters.page) params.set("page", String(filters.page));
   return params.toString();
 }
 
@@ -29,17 +28,19 @@ export const getStaffList = (filters: StaffFilters) =>
 
 export const getStaffMember = (id: number) => apiClient.get<Staff>(E.staffMember(id));
 
-/** The current user's own Staff record, if their account is linked to one
- * (e.g. a teacher). 404 if the logged-in user has no linked staff record. */
 export const getMyStaffProfile = () => apiClient.get<Staff>(E.myProfile);
 
-export const createStaff = (data: StaffInput) => apiClient.post<Staff>(E.staff, { ...data });
+export const createStaff = (data: StaffCreateInput) =>
+  apiClient.post<Staff>(E.staff, { ...data });
 
-export const updateStaff = (id: number, data: StaffInput) =>
+export const updateStaff = (id: number, data: StaffUpdateInput) =>
   apiClient.put<Staff>(E.staffMember(id), { ...data });
 
-export const updateStaffStatus = (id: number, status: StaffStatus) =>
-  apiClient.post<Staff>(E.staffStatus(id), { status });
+/** Activate a staff member (re-opens terminated is blocked by the service). */
+export const activateStaff = (id: number) => apiClient.post<Staff>(E.activate(id), {});
+
+/** Deactivate a staff member (sets status to INACTIVE, login is unchanged). */
+export const deactivateStaff = (id: number) => apiClient.post<Staff>(E.deactivate(id), {});
 
 export const grantStaffAccount = (id: number, data: GrantAccountInput) =>
   apiClient.post<Staff>(E.staffAccount(id), { ...data });
@@ -71,7 +72,7 @@ export const createSubjectAssignment = (staffId: number, data: SubjectTeacherAss
 export const deleteSubjectAssignment = (id: number) =>
   apiClient.delete<void>(E.deleteSubjectAssignment(id));
 
-// Reverse (class-scoped) lookups — read-only, for the class academic view.
+// Reverse (class-scoped) lookups
 export const getClassTeachersForClass = (classId: number, academicSessionId: number) =>
   apiClient.get<ClassTeacherAssignment[]>(
     `${E.classTeachersForClass(classId)}?academic_session_id=${academicSessionId}`

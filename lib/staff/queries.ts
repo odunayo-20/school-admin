@@ -5,9 +5,9 @@ import * as api from "@/lib/staff/api";
 import type {
   ClassTeacherAssignmentInput,
   GrantAccountInput,
+  StaffCreateInput,
   StaffFilters,
-  StaffInput,
-  StaffStatus,
+  StaffUpdateInput,
   SubjectTeacherAssignmentInput,
 } from "@/lib/staff/types";
 
@@ -28,15 +28,13 @@ export const useStaffList = (filters: StaffFilters) =>
 export const useStaffMember = (id: number) =>
   useQuery({ queryKey: keys.detail(id), queryFn: () => api.getStaffMember(id), enabled: id > 0 });
 
-/** 404 is an expected, normal outcome here (not every account is linked to
- * a staff record) — don't retry it like a real failure. */
 export const useMyStaffProfile = () =>
   useQuery({ queryKey: ["staff", "me"], queryFn: api.getMyStaffProfile, retry: false });
 
 export function useCreateStaff() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: StaffInput) => api.createStaff(data),
+    mutationFn: (data: StaffCreateInput) => api.createStaff(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["staff", "list"] }),
   });
 }
@@ -44,7 +42,7 @@ export function useCreateStaff() {
 export function useUpdateStaff(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: StaffInput) => api.updateStaff(id, data),
+    mutationFn: (data: StaffUpdateInput) => api.updateStaff(id, data),
     onSuccess: (staff) => {
       queryClient.setQueryData(keys.detail(id), staff);
       queryClient.invalidateQueries({ queryKey: ["staff", "list"] });
@@ -52,15 +50,43 @@ export function useUpdateStaff(id: number) {
   });
 }
 
-export function useUpdateStaffStatus(id: number) {
+export function useActivateStaff(id: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (status: StaffStatus) => api.updateStaffStatus(id, status),
+    mutationFn: () => api.activateStaff(id),
     onSuccess: (staff) => {
       queryClient.setQueryData(keys.detail(id), staff);
       queryClient.invalidateQueries({ queryKey: ["staff", "list"] });
     },
   });
+}
+
+export function useDeactivateStaff(id: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.deactivateStaff(id),
+    onSuccess: (staff) => {
+      queryClient.setQueryData(keys.detail(id), staff);
+      queryClient.invalidateQueries({ queryKey: ["staff", "list"] });
+    },
+  });
+}
+
+/** @deprecated Use useActivateStaff / useDeactivateStaff */
+export function useUpdateStaffStatus(id: number) {
+  const activate = useActivateStaff(id);
+  const deactivate = useDeactivateStaff(id);
+  return {
+    mutate: (status: string) => {
+      if (status === "ACTIVE" || status === "active") activate.mutate();
+      else deactivate.mutate();
+    },
+    mutateAsync: async (status: string) => {
+      if (status === "ACTIVE" || status === "active") return activate.mutateAsync();
+      return deactivate.mutateAsync();
+    },
+    isPending: activate.isPending || deactivate.isPending,
+  };
 }
 
 export function useGrantStaffAccount(id: number) {
@@ -88,9 +114,6 @@ export function useCreateClassAssignment(staffId: number) {
     mutationFn: (data: ClassTeacherAssignmentInput) => api.createClassAssignment(staffId, data),
     onSuccess: (assignment) => {
       queryClient.invalidateQueries({ queryKey: keys.classAssignments(staffId) });
-      // The class academic view (Module 05) reads the same assignments the
-      // other way round — keep it from going stale too, without touching
-      // unrelated class-config queries.
       queryClient.invalidateQueries({
         queryKey: keys.classTeachersForClass(assignment.class.id, assignment.academic_session.id),
       });
@@ -147,7 +170,7 @@ export function useDeleteSubjectAssignment(staffId: number) {
   });
 }
 
-// Reverse (class-scoped) lookups — read-only, for the class academic view.
+// Reverse (class-scoped) lookups
 export const useClassTeachersForClass = (classId: number, academicSessionId: number) =>
   useQuery({
     queryKey: keys.classTeachersForClass(classId, academicSessionId),
